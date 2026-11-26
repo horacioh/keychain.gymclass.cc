@@ -1,0 +1,16 @@
+---
+import Site from '../layouts/Site.astro';
+import { copy } from '../config/copy';
+import type { Language } from '../config/products';
+
+interface Props { language: Language }
+const { language } = Astro.props;
+const t = copy[language];
+---
+<Site language={language} title={t.thanksTitle} description={t.thanksText} thanks>
+  <main class="wrap thanks">
+    <h1>{t.thanksTitle}</h1>
+    <p>{t.thanksText}</p>
+    <a class="button button-dark" href={`${t.home}#shop`}>{t.back} <span aria-hidden="true">↗</span></a>
+  </main>
+</Site>

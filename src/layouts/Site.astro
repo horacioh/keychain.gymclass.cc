@@ -1,0 +1,45 @@
+---
+import '@fontsource-variable/inter';
+import '@fontsource-variable/inter-tight';
+import '../styles/global.css';
+import { copy } from '../config/copy';
+import type { Language } from '../config/products';
+
+interface Props { language: Language; title: string; description: string; thanks?: boolean }
+const { language, title, description, thanks = false } = Astro.props;
+const t = copy[language];
+const otherRoute = thanks ? `${t.otherHome}thanks/` : t.otherHome;
+---
+<!doctype html>
+<html lang={language}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content={description} />
+    <meta name="theme-color" content="#f7f5f0" />
+    <link rel="icon" type="image/svg+xml" href="/belt.svg" />
+    <link rel="alternate" hreflang={t.otherLang} href={otherRoute} />
+    <title>{title} · BJJ Keychain</title>
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="wrap flex items-center justify-between gap-4">
+        <a class="wordmark inline-flex items-center gap-2.5" href={t.home}>
+          <img width="31" height="31" src="/belt.svg" alt="" />
+          BJJ Keychain
+        </a>
+        <nav class="site-nav flex items-center" aria-label={language === 'en' ? 'Main navigation' : 'Navegación principal'}>
+          <a class="nav-faq" href={`${t.home}#faq`}>{t.faqLink}</a>
+          <a class="language-link" href={otherRoute} lang={t.otherLang}>{t.otherLanguage}</a>
+        </nav>
+      </div>
+    </header>
+    <slot />
+    <footer class="site-footer">
+      <div class="wrap flex flex-wrap items-center justify-between gap-4">
+        <div><strong>BJJ Keychain</strong><p>{t.footer}</p></div>
+        <a href={`${t.home}#shop`}>{t.shopLink} <span aria-hidden="true">↗</span></a>
+      </div>
+    </footer>
+  </body>
+</html>

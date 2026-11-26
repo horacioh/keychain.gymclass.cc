@@ -1,0 +1,197 @@
+---
+import Site from '../layouts/Site.astro';
+import { copy } from '../config/copy';
+import { formatPrice, products, type Language } from '../config/products';
+
+interface Props { language: Language }
+const { language } = Astro.props;
+const t = copy[language];
+---
+<Site language={language} title={language === 'en' ? 'Your belt, on your keys' : 'Tu cinturón, en tus llaves'} description={t.pitch}>
+  <main class="wrap">
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="hero-copy">
+        <h1 id="hero-title">{t.title}</h1>
+        <p>{t.pitch}</p>
+        <a class="button button-dark" href="#shop">{t.browse} <span aria-hidden="true">↓</span></a>
+      </div>
+      <img class="hero-image" width="2400" height="1350" src="/lineup.webp" alt={t.photoAlt} fetchpriority="high" />
+    </section>
+
+    <section id="shop" class="shop" aria-labelledby="shop-title">
+      <div class="section-heading">
+        <h2 id="shop-title">{t.shopTitle}</h2>
+        <p>{t.shopText}</p>
+      </div>
+      <div class="shop-grid" data-store
+        data-language={language}
+        data-pending={t.pending}
+        data-checkout={t.checkout}
+        data-error={t.checkoutError}
+      >
+        <div class="products">
+          {products.map((product) => (
+            <article class="product" data-product={product.id}>
+              <div class="product-image">
+                <img src={product.image} alt={product.id === 'bundle' ? t.photoAlt : product.name[language]} width={product.id === 'bundle' ? 1000 : 1600} height={product.id === 'bundle' ? 1000 : 1600} decoding="async" loading="lazy" />
+              </div>
+              <div class="product-body">
+                <h3>{product.name[language]}</h3>
+                {product.id === 'bundle' && <p class="bundle-detail">{t.bundleDetail}</p>}
+                <div class="product-actions flex flex-wrap items-center justify-between gap-2">
+                  <p class="product-price">{formatPrice(product.unitPrice, language)}</p>
+                  <div class="stepper inline-flex items-center" role="group" aria-label={product.name[language]}>
+                    <button type="button" data-step="-1" aria-label={`${t.decrement}: ${product.name[language]}`} disabled>−</button>
+                    <output data-quantity aria-live="polite">0</output>
+                    <button type="button" data-step="1" aria-label={`${t.increment}: ${product.name[language]}`}>+</button>
+                  </div>
+                </div>
+              </div>
+            </article>
+          ))}
+        </div>
+        <aside class="order" aria-labelledby="order-title">
+          <div class="cart">
+            <h2 id="order-title">{t.cartTitle}</h2>
+            <p class="cart-empty" data-empty>{t.empty}</p>
+            <ul class="cart-items" data-cart-items hidden></ul>
+            <div class="cart-total flex items-center justify-between gap-4">
+              <span>{t.total}</span>
+              <output data-total aria-live="polite">{formatPrice(0, language)}</output>
+            </div>
+            <button class="button button-dark checkout" type="button" data-checkout-button disabled>
+              <span data-checkout-label>{t.checkout}</span><span aria-hidden="true">↗</span>
+            </button>
+            <p class="checkout-error" data-checkout-error role="alert" hidden></p>
+            <p class="cart-charge">{t.charge}</p>
+          </div>
+          <div class="delivery">
+            <h3>{t.deliveryTitle}</h3>
+            <p>{t.delivery}</p>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <section id="faq" class="faq" aria-labelledby="faq-title">
+      <h2 id="faq-title">{t.faqTitle}</h2>
+      <div class="faq-list">
+        {t.faq.map(([question, answer], index) => (
+          <details open={index === 0}>
+            <summary>{question}<span aria-hidden="true">+</span></summary>
+            <p>{answer}</p>
+          </details>
+        ))}
+      </div>
+    </section>
+  </main>
+</Site>
+
+<script>
+  import { formatPrice, MAX_QUANTITY, products, type Language, type Product } from '../config/products';
+
+  const store = document.querySelector<HTMLElement>('[data-store]')!;
+  const language = store.dataset.language as Language;
+  const checkout = store.querySelector<HTMLButtonElement>('[data-checkout-button]')!;
+  const label = store.querySelector<HTMLElement>('[data-checkout-label]')!;
+  const error = store.querySelector<HTMLElement>('[data-checkout-error]')!;
+  const empty = store.querySelector<HTMLElement>('[data-empty]')!;
+  const list = store.querySelector<HTMLUListElement>('[data-cart-items]')!;
+  const total = store.querySelector<HTMLOutputElement>('[data-total]')!;
+  const storageKey = 'bjj-keychain-cart';
+  type Id = Product['id'];
+  const cart = new Map<Id, number>();
+
+  try {
+    const saved: Record<string, unknown> | null = JSON.parse(sessionStorage.getItem(storageKey) ?? 'null');
+    for (const { id } of products) {
+      const qty = saved?.[id];
+      if (typeof qty === 'number' && Number.isInteger(qty) && qty > 0 && qty <= MAX_QUANTITY) cart.set(id, qty);
+    }
+  } catch {
+    // A blocked or stale session store must not prevent ordering.
+  }
+
+  const cards = products.map(product => {
+    const card = store.querySelector<HTMLElement>(`[data-product="${product.id}"]`)!;
+    return {
+      product,
+      decrement: card.querySelector<HTMLButtonElement>('[data-step="-1"]')!,
+      increment: card.querySelector<HTMLButtonElement>('[data-step="1"]')!,
+      quantity: card.querySelector<HTMLOutputElement>('[data-quantity]')!,
+    };
+  });
+
+  let pending = false;
+  function render() {
+    let amount = 0;
+    list.replaceChildren();
+    for (const { product, decrement, increment, quantity } of cards) {
+      const qty = cart.get(product.id) ?? 0;
+      quantity.value = String(qty);
+      decrement.disabled = pending || qty === 0;
+      increment.disabled = pending || qty === MAX_QUANTITY;
+      if (!qty) continue;
+      const line = document.createElement('li');
+      const productLabel = document.createElement('span');
+      productLabel.textContent = `${qty} × ${product.name[language]}`;
+      const price = document.createElement('span');
+      price.textContent = formatPrice(qty * product.unitPrice, language);
+      line.append(productLabel, price);
+      list.append(line);
+      amount += qty * product.unitPrice;
+    }
+    empty.hidden = cart.size > 0;
+    list.hidden = cart.size === 0;
+    total.value = formatPrice(amount, language);
+    checkout.disabled = pending || !cart.size;
+    label.textContent = (pending ? store.dataset.pending : store.dataset.checkout) ?? '';
+  }
+
+  function change(id: Id, delta: number) {
+    const qty = (cart.get(id) ?? 0) + delta;
+    if (qty < 0 || qty > MAX_QUANTITY) return;
+    if (qty) cart.set(id, qty);
+    else cart.delete(id);
+    try {
+      sessionStorage.setItem(storageKey, JSON.stringify(Object.fromEntries(cart)));
+    } catch {
+      // The current page can still keep the order in memory.
+    }
+    error.hidden = true;
+    render();
+  }
+
+  for (const { product, decrement, increment } of cards) {
+    decrement.addEventListener('click', () => change(product.id, -1));
+    increment.addEventListener('click', () => change(product.id, 1));
+  }
+
+  checkout.addEventListener('click', async () => {
+    if (pending || !cart.size) return;
+    pending = true;
+    error.hidden = true;
+    render();
+    try {
+      const response = await fetch('/api/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ items: [...cart].map(([id, qty]) => ({ id, qty })) }),
+      });
+      if (!response.ok) throw new Error('Checkout request failed');
+      const { url } = await response.json();
+      if (typeof url !== 'string') throw new Error('Missing checkout URL');
+      window.location.assign(url);
+    } catch {
+      error.textContent = store.dataset.error ?? '';
+      error.hidden = false;
+      pending = false;
+      render();
+    }
+  });
+
+  window.addEventListener('pageshow', (event) => {
+    if (event.persisted) { pending = false; render(); }
+  });
+  render();
+</script>
