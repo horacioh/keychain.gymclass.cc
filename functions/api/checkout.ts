@@ -44,6 +44,7 @@ export async function onRequestPost({ request, env }: CheckoutContext) {
   const params = new URLSearchParams({
     mode: 'payment',
     currency: 'eur',
+    'managed_payments[enabled]': 'false',
     'payment_intent_data[capture_method]': 'manual',
     'shipping_address_collection[allowed_countries][0]': 'ES',
     'phone_number_collection[enabled]': 'true',
@@ -74,7 +75,17 @@ export async function onRequestPost({ request, env }: CheckoutContext) {
     });
     if (!stripe.ok) {
       if (stripe.status === 401) console.error('[checkout] Stripe authentication failed (HTTP 401).');
-      else console.error(`[checkout] Stripe returned HTTP ${stripe.status}.`);
+      else {
+        const body = await stripe.json().catch(() => null);
+        const message: unknown = body?.error?.message;
+        const diagnostic = `[checkout] Stripe returned HTTP ${stripe.status}.`;
+        if (typeof message === 'string' && message.trim()) {
+          const safeMessage = message.replaceAll(secret, '[REDACTED]').replace(/\b(?:sk|rk)_(?:test|live)_[\w*…-]*/g, '[REDACTED]');
+          console.error(diagnostic, safeMessage);
+        } else {
+          console.error(diagnostic);
+        }
+      }
       return stripeUnavailable();
     }
     const result: unknown = await stripe.json();

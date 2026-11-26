@@ -29,6 +29,7 @@ test('sends Stripe Price IDs, manual capture, both shipping rates and the return
     expect(Object.fromEntries(fields)).toEqual({
       mode: 'payment',
       currency: 'eur',
+      'managed_payments[enabled]': 'false',
       'payment_intent_data[capture_method]': 'manual',
       'shipping_address_collection[allowed_countries][0]': 'ES',
       'phone_number_collection[enabled]': 'true',
@@ -90,4 +91,26 @@ test('sanitizes Stripe authentication errors', async () => {
   expect(response.status).toBe(502);
   expect(await response.json()).toEqual({ error: 'Checkout is temporarily unavailable. Please try again.' });
   expect(log).toHaveBeenCalledWith('[checkout] Stripe authentication failed (HTTP 401).');
+  expect(log).toHaveBeenCalledTimes(1);
+});
+
+test.each([
+  ['descriptive', () => Response.json({ error: { message: 'Invalid shipping option.' } }, { status: 400 }),
+    ['[checkout] Stripe returned HTTP 400.', 'Invalid shipping option.']],
+  ['sensitive', () => Response.json({ error: { message: 'Cannot use not-a-real-key or sk_test_***123.' } }, { status: 400 }),
+    ['[checkout] Stripe returned HTTP 400.', 'Cannot use [REDACTED] or [REDACTED].']],
+  ['empty', () => Response.json({ error: { message: '' } }, { status: 400 }),
+    ['[checkout] Stripe returned HTTP 400.']],
+  ['non-JSON', () => new Response('Bad Gateway', { status: 502 }),
+    ['[checkout] Stripe returned HTTP 502.']],
+] as const)('logs a safe diagnosis for %s Stripe errors', async (_label, reply, expectedLog) => {
+  globalThis.fetch = mock(async () => reply()) as unknown as typeof fetch;
+  const log = mock(() => {});
+  console.error = log;
+
+  const response = await order({ items: [{ id: 'white', qty: 1 }] });
+  expect(response.status).toBe(502);
+  expect(await response.json()).toEqual({ error: 'Checkout is temporarily unavailable. Please try again.' });
+  expect(log).toHaveBeenCalledWith(...expectedLog);
+  expect(log).toHaveBeenCalledTimes(1);
 });

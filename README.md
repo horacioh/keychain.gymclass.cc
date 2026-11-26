@@ -16,11 +16,13 @@ Use `bun run dev` to work on the static storefront without the checkout function
 ## Stripe setup
 
 1. In Stripe test mode, create one product for each belt colour (white, blue, purple, brown, black) and a sixth product for the five-belt bundle.
-2. Give each product a one-time EUR Price and copy its **Price ID** (starting with `price_`, not the Product ID). Set `STRIPE_PRICE_WHITE`, `STRIPE_PRICE_BLUE`, `STRIPE_PRICE_PURPLE`, `STRIPE_PRICE_BROWN`, `STRIPE_PRICE_BLACK`, and `STRIPE_PRICE_BUNDLE` to the matching IDs.
+2. Give each product a one-time EUR price. In **Product catalogue**, open the product and find the price under **Pricing**. Open the price or use its menu to copy the **Price ID** (starting with `price_`, not the `prod_` Product ID). Set `STRIPE_PRICE_WHITE`, `STRIPE_PRICE_BLUE`, `STRIPE_PRICE_PURPLE`, `STRIPE_PRICE_BROWN`, `STRIPE_PRICE_BLACK`, and `STRIPE_PRICE_BUNDLE` to the matching IDs.
 3. Set `STRIPE_SECRET_KEY` to the matching Stripe-mode secret key. Use a test key for local and preview environments.
-4. The displayed prices in `src/config/products.ts` are **TODO: €12 for one belt and €50 for the bundle**. Check these before launch and keep them in sync with Stripe. The server sends Stripe only the configured Price IDs and quantities. Stripe’s prices determine the actual charge.
+4. The displayed prices in `src/config/products.ts` are €12 for one belt and €50 for the bundle. Keep them in sync with Stripe. The server sends Stripe the configured Price IDs and quantities, and Stripe’s prices determine the actual charge.
 
 Checkout offers free hand delivery at the academy or €5 shipping to peninsular Spain. Stripe collects a phone number and a Spanish shipping address whichever option is picked. The country filter accepts all Spanish addresses; verify that the destination is in peninsular Spain before capturing an order with shipping.
+
+Checkout explicitly disables Stripe Managed Payments for this session (`managed_payments[enabled]=false`) because Managed Payments does not support the shipping address collection used here.
 
 ## Reviewing an order
 
