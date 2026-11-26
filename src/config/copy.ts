@@ -13,7 +13,7 @@ export const copy = {
     charge: 'Payment is authorized at checkout and only charged once I confirm your order.',
     faqTitle: 'Good to know',
     faq: [
-      ['How do the stripes work?', 'Unscrew the cap and slide the rings off. Alternate white rings with the darker rings to show 0–4 stripes on the rank bar. Group any unused white rings at the top and screw the cap back on.'],
+      ['How do the stripes work?', 'All four white stripes come fitted below the solid section of the rank bar. To show fewer stripes, unscrew the cap, slide off the rings and group any unused white rings above the bar. Then slide the rings back on and screw the cap shut.'],
       ['What is it made of?', 'The belt pieces are 3D-printed in PLA. Each keychain includes a steel split ring.'],
       ['How big is it?', 'The ring stack is about 30 mm tall. The assembled printed body is about 60 mm long, not including the steel key ring.'],
     ],
@@ -36,7 +36,7 @@ export const copy = {
     charge: 'El pago se autoriza al hacer el pedido y solo se cobra cuando lo confirme.',
     faqTitle: 'Preguntas frecuentes',
     faq: [
-      ['¿Cómo funcionan las rayas?', 'Desenrosca el tapón y saca los aros. Alterna los aros blancos con los de la barra de grados para mostrar de 0 a 4 rayas. Agrupa los aros blancos que no uses en la parte superior y vuelve a enroscar el tapón.'],
+      ['¿Cómo funcionan las rayas?', 'Las cuatro rayas blancas vienen montadas debajo de la parte lisa de la barra de grados. Para mostrar menos rayas, desenrosca el tapón, saca los aros y agrupa los aros blancos que no uses por encima de la barra. Vuelve a colocar los aros y enrosca el tapón.'],
       ['¿De qué material es?', 'Las piezas del cinturón están impresas en 3D en PLA. Cada llavero incluye una anilla de acero.'],
       ['¿Cuánto mide?', 'El tramo de los aros mide unos 30 mm. El cuerpo impreso montado mide unos 60 mm, sin contar la anilla de acero.'],
     ],
