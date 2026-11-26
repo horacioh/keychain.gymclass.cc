@@ -33,6 +33,6 @@ An authorization may appear as a pending hold on the customer’s account. Strip
 
 ## Deploy to Cloudflare Pages
 
-Use the project root as the build root, `bun run build` as the build command, and `dist` as the output directory. Keep the root `functions/` directory beside that output so Pages includes the checkout function. For a manual deploy, build locally and run `npx wrangler pages deploy dist` from the project root.
+Use the `keychain-gymclass` Pages project for the `horacioh/keychain.gymclass.cc` GitHub repository. Use the project root as the build root, `bun run build` as the build command, and `dist` as the output directory. Keep the root `functions/` directory beside that output so Pages includes the checkout function. For a manual deploy, build locally and run `npx wrangler pages deploy dist` from the project root.
 
-Add the seven Stripe bindings above in the Pages project’s **Settings → Variables and Secrets**. Set preview and production independently, using production-mode Stripe Prices and secret only in production. Attach `bjjkeychain.horacioh.com` under **Custom domains** and verify a full Stripe test-mode checkout before switching production to live mode.
+Add the seven Stripe bindings above in the Pages project’s **Settings → Variables and Secrets**. Set preview and production independently, using production-mode Stripe Prices and secret only in production. Attach `keychain.gymclass.cc` under **Custom domains** and verify a full Stripe test-mode checkout before switching production to live mode.
