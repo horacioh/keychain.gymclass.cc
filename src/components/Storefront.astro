@@ -33,7 +33,7 @@ const t = copy[language];
           {products.map((product) => (
             <article class="product" data-product={product.id}>
               <div class="product-image">
-                <img src={product.image} alt={product.id === 'bundle' ? t.photoAlt : product.name[language]} width={product.id === 'bundle' ? 1000 : 1600} height={product.id === 'bundle' ? 1000 : 1600} decoding="async" loading="lazy" />
+                <img src={product.image} alt={product.id === 'bundle' ? t.bundleAlt : product.name[language]} width={product.id === 'bundle' ? 1000 : 1600} height={product.id === 'bundle' ? 1000 : 1600} decoding="async" loading="lazy" />
               </div>
               <div class="product-body">
                 <h3>{product.name[language]}</h3>
