@@ -6,6 +6,11 @@ const origin = 'https://example.test';
 const checkoutUrl = 'https://checkout.stripe.com/c/pay/test';
 const originalFetch = globalThis.fetch;
 const originalError = console.error;
+const sessions = 'https://api.stripe.com/v1/checkout/sessions';
+
+function stripeProduct(id: string, unit_amount: number, overrides: Record<string, unknown> = {}) {
+  return Response.json({ active: true, default_price: { id, unit_amount, active: true, currency: 'eur', type: 'one_time', ...overrides } });
+}
 
 afterEach(() => {
   globalThis.fetch = originalFetch;
@@ -14,15 +19,21 @@ afterEach(() => {
 
 function order(body: unknown, env: Context['env'] = {
   STRIPE_SECRET_KEY: 'not-a-real-key',
-  STRIPE_PRICE_WHITE: 'price_white_test',
-  STRIPE_PRICE_BUNDLE: 'price_bundle_test',
+  STRIPE_PRODUCT_WHITE: 'prod_white_test',
+  STRIPE_PRODUCT_BUNDLE: 'prod_bundle_test',
 }) {
   const request = new Request(`${origin}/api/checkout`, { method: 'POST', body: JSON.stringify(body) });
   return onRequestPost({ request, env });
 }
 
 test('sends Stripe Price IDs, manual capture, both shipping rates and the return URLs', async () => {
-  const stripe = mock(async (_url: string, init: RequestInit) => {
+  const stripe = mock(async (url: string | URL, init: RequestInit) => {
+    if (url instanceof URL) {
+      expect(url.searchParams.get('expand[]')).toBe('default_price');
+      if (url.pathname === '/v1/products/prod_white_test') return stripeProduct('price_white_test', 900);
+      expect(url.pathname).toBe('/v1/products/prod_bundle_test');
+      return stripeProduct('price_bundle_test', 5000);
+    }
     const fields = init.body as URLSearchParams;
     expect(init.method).toBe('POST');
     expect(init.headers).toMatchObject({ 'Content-Type': 'application/x-www-form-urlencoded' });
@@ -52,19 +63,21 @@ test('sends Stripe Price IDs, manual capture, both shipping rates and the return
   });
   globalThis.fetch = stripe as unknown as typeof fetch;
 
-  const response = await order({ items: [{ id: 'white', qty: 20 }, { id: 'bundle', qty: 1 }] });
+  const response = await order({ items: [{ id: 'white', qty: 20, unitAmount: 900 }, { id: 'bundle', qty: 1, unitAmount: 5000 }] });
   expect(response.status).toBe(200);
   expect(await response.json()).toEqual({ url: checkoutUrl });
-  expect(stripe.mock.calls[0]?.[0]).toBe('https://api.stripe.com/v1/checkout/sessions');
+  expect(stripe.mock.calls.at(-1)?.[0]).toBe(sessions);
 });
 
 test.each([
   ['empty', []],
-  ['all-zero', [{ id: 'white', qty: 0 }, { id: 'bundle', qty: 0 }]],
-  ['unknown product', [{ id: 'green', qty: 1 }]],
-  ['too many', [{ id: 'white', qty: 21 }]],
-  ['non-integer', [{ id: 'white', qty: 1.5 }]],
-  ['duplicate', [{ id: 'white', qty: 10 }, { id: 'white', qty: 15 }]],
+  ['all-zero', [{ id: 'white', qty: 0, unitAmount: 900 }, { id: 'bundle', qty: 0, unitAmount: 5000 }]],
+  ['unknown product', [{ id: 'green', qty: 1, unitAmount: 900 }]],
+  ['too many', [{ id: 'white', qty: 21, unitAmount: 900 }]],
+  ['non-integer', [{ id: 'white', qty: 1.5, unitAmount: 900 }]],
+  ['duplicate', [{ id: 'white', qty: 10, unitAmount: 900 }, { id: 'white', qty: 15, unitAmount: 900 }]],
+  ['missing amount', [{ id: 'white', qty: 1 }]],
+  ['invalid amount', [{ id: 'white', qty: 1, unitAmount: -1 }]],
 ] as const)('rejects %s cart without reaching Stripe', async (_label, items) => {
   const stripe = mock(() => { throw new Error('Unexpected Stripe call'); });
   globalThis.fetch = stripe as unknown as typeof fetch;
@@ -77,17 +90,45 @@ test('reports missing configuration without contacting Stripe', async () => {
   const stripe = mock(() => { throw new Error('Unexpected Stripe call'); });
   globalThis.fetch = stripe as unknown as typeof fetch;
 
-  expect((await order({ items: [{ id: 'white', qty: 1 }] }, {})).status).toBe(503);
+  expect((await order({ items: [{ id: 'white', qty: 1, unitAmount: 900 }] }, {})).status).toBe(503);
   expect(stripe).not.toHaveBeenCalled();
 });
 
 test('sanitizes Stripe authentication errors', async () => {
-  globalThis.fetch = mock(async () => Response.json({ error: { message: 'Sensitive upstream details' } }, { status: 401 })) as unknown as typeof fetch;
+  globalThis.fetch = mock(async (url: string | URL) => url === sessions
+    ? Response.json({ error: { message: 'Sensitive upstream details' } }, { status: 401 })
+    : stripeProduct('price_white_test', 900)) as unknown as typeof fetch;
   const log = mock(() => {});
   console.error = log;
 
-  const response = await order({ items: [{ id: 'white', qty: 1 }] });
+  const response = await order({ items: [{ id: 'white', qty: 1, unitAmount: 900 }] });
   expect(response.status).toBe(502);
   expect(await response.json()).toEqual({ error: 'Checkout is temporarily unavailable. Please try again.' });
   expect(log).toHaveBeenCalledWith('[checkout] Stripe authentication failed (HTTP 401).');
+});
+
+test('returns authoritative amounts for review without creating a session when a price changes', async () => {
+  const stripe = mock(async (url: URL) => url.pathname.endsWith('prod_white_test')
+    ? stripeProduct('price_white_new', 1200)
+    : stripeProduct('price_bundle_test', 5000));
+  globalThis.fetch = stripe as unknown as typeof fetch;
+
+  const response = await order({ items: [{ id: 'white', qty: 1, unitAmount: 900 }, { id: 'bundle', qty: 1, unitAmount: 5000 }] });
+  expect(response.status).toBe(409);
+  expect((await response.json()).prices).toEqual({ white: 1200, bundle: 5000 });
+  expect(stripe).toHaveBeenCalledTimes(2);
+});
+
+test.each([
+  ['missing', () => Response.json({ active: true, default_price: null })],
+  ['inactive', () => stripeProduct('price_white_test', 900, { active: false })],
+  ['non-EUR', () => stripeProduct('price_white_test', 900, { currency: 'usd' })],
+  ['recurring', () => stripeProduct('price_white_test', 900, { type: 'recurring' })],
+] as const)('rejects %s default prices without creating a session', async (_kind, reply) => {
+  const stripe = mock(async () => reply());
+  globalThis.fetch = stripe as unknown as typeof fetch;
+
+  const response = await order({ items: [{ id: 'white', qty: 1, unitAmount: 900 }] });
+  expect(response.status).toBe(502);
+  expect(stripe).toHaveBeenCalledTimes(1);
 });

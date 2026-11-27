@@ -28,6 +28,7 @@ const t = copy[language];
         data-pending={t.pending}
         data-checkout={t.checkout}
         data-error={t.checkoutError}
+        data-price-changed={t.priceChanged}
       >
         <div class="products">
           {products.map((product) => (
@@ -39,7 +40,7 @@ const t = copy[language];
                 <h3>{product.name[language]}</h3>
                 {product.id === 'bundle' && <p class="bundle-detail">{t.bundleDetail}</p>}
                 <div class="product-actions flex flex-wrap items-center justify-between gap-2">
-                  <p class="product-price">{formatPrice(product.unitPrice, language)}</p>
+                  <p class="product-price" data-unit-price>{formatPrice(product.unitPrice, language)}</p>
                   <div class="stepper inline-flex items-center" role="group" aria-label={product.name[language]}>
                     <button type="button" data-step="-1" aria-label={`${t.decrement}: ${product.name[language]}`} disabled>−</button>
                     <output data-quantity aria-live="polite">0</output>
@@ -101,6 +102,16 @@ const t = copy[language];
   const storageKey = 'bjj-keychain-cart';
   type Id = Product['id'];
   const cart = new Map<Id, number>();
+  const prices = new Map<Id, number>();
+
+  function updatePrices(values: unknown, preserveExisting = false) {
+    if (!values || typeof values !== 'object') return;
+    for (const { id } of products) {
+      if (preserveExisting && prices.has(id)) continue;
+      const amount = (values as Record<string, unknown>)[id];
+      if (typeof amount === 'number' && Number.isSafeInteger(amount) && amount >= 0) prices.set(id, amount);
+    }
+  }
 
   try {
     const saved: Record<string, unknown> | null = JSON.parse(sessionStorage.getItem(storageKey) ?? 'null');
@@ -116,6 +127,7 @@ const t = copy[language];
     const card = store.querySelector<HTMLElement>(`[data-product="${product.id}"]`)!;
     return {
       product,
+      unitPrice: card.querySelector<HTMLElement>('[data-unit-price]')!,
       decrement: card.querySelector<HTMLButtonElement>('[data-step="-1"]')!,
       increment: card.querySelector<HTMLButtonElement>('[data-step="1"]')!,
       quantity: card.querySelector<HTMLOutputElement>('[data-quantity]')!,
@@ -126,8 +138,10 @@ const t = copy[language];
   function render() {
     let amount = 0;
     list.replaceChildren();
-    for (const { product, decrement, increment, quantity } of cards) {
+    for (const { product, unitPrice, decrement, increment, quantity } of cards) {
       const qty = cart.get(product.id) ?? 0;
+      const cents = prices.get(product.id) ?? product.unitPrice;
+      unitPrice.textContent = formatPrice(cents, language);
       quantity.value = String(qty);
       decrement.disabled = pending || qty === 0;
       increment.disabled = pending || qty === MAX_QUANTITY;
@@ -136,10 +150,10 @@ const t = copy[language];
       const productLabel = document.createElement('span');
       productLabel.textContent = `${qty} × ${product.name[language]}`;
       const price = document.createElement('span');
-      price.textContent = formatPrice(qty * product.unitPrice, language);
+      price.textContent = formatPrice(qty * cents, language);
       line.append(productLabel, price);
       list.append(line);
-      amount += qty * product.unitPrice;
+      amount += qty * cents;
     }
     empty.hidden = cart.size > 0;
     list.hidden = cart.size === 0;
@@ -176,8 +190,22 @@ const t = copy[language];
       const response = await fetch('/api/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ items: [...cart].map(([id, qty]) => ({ id, qty })) }),
+        body: JSON.stringify({
+          items: products.flatMap(({ id, unitPrice }) => {
+            const qty = cart.get(id);
+            return qty ? [{ id, qty, unitAmount: prices.get(id) ?? unitPrice }] : [];
+          }),
+        }),
       });
+      if (response.status === 409) {
+        const { prices: current } = await response.json();
+        updatePrices(current);
+        error.textContent = store.dataset.priceChanged ?? '';
+        error.hidden = false;
+        pending = false;
+        render();
+        return;
+      }
       if (!response.ok) throw new Error('Checkout request failed');
       const { url } = await response.json();
       if (typeof url !== 'string') throw new Error('Missing checkout URL');
@@ -194,4 +222,17 @@ const t = copy[language];
     if (event.persisted) { pending = false; render(); }
   });
   render();
+
+  async function loadPrices() {
+    try {
+      const response = await fetch('/api/prices');
+      if (!response.ok) return;
+      const values: unknown = await response.json();
+      updatePrices(values, true);
+      render();
+    } catch {
+      // Keep the static prices if the catalog is unavailable.
+    }
+  }
+  void loadPrices();
 </script>
