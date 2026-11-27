@@ -106,6 +106,30 @@ test('sanitizes Stripe authentication errors', async () => {
   expect(response.status).toBe(502);
   expect(await response.json()).toEqual({ error: 'Checkout is temporarily unavailable. Please try again.' });
   expect(log).toHaveBeenCalledWith('[checkout] Stripe authentication failed (HTTP 401).');
+  expect(log).toHaveBeenCalledTimes(1);
+});
+
+test.each([
+  ['descriptive', () => Response.json({ error: { message: 'Invalid shipping option.' } }, { status: 400 }),
+    ['[checkout] Stripe returned HTTP 400.', 'Invalid shipping option.']],
+  ['sensitive', () => Response.json({ error: { message: 'Cannot use not-a-real-key or sk_test_***123.' } }, { status: 400 }),
+    ['[checkout] Stripe returned HTTP 400.', 'Cannot use [REDACTED] or [REDACTED].']],
+  ['empty', () => Response.json({ error: { message: '' } }, { status: 400 }),
+    ['[checkout] Stripe returned HTTP 400.']],
+  ['non-JSON', () => new Response('Bad Gateway', { status: 502 }),
+    ['[checkout] Stripe returned HTTP 502.']],
+] as const)('logs a safe diagnosis for %s Stripe errors', async (_label, reply, expectedLog) => {
+  globalThis.fetch = mock(async (url: string | URL) => url === sessions
+    ? reply()
+    : stripeProduct('price_white_test', 900)) as unknown as typeof fetch;
+  const log = mock(() => {});
+  console.error = log;
+
+  const response = await order({ items: [{ id: 'white', qty: 1, unitAmount: 900 }] });
+  expect(response.status).toBe(502);
+  expect(await response.json()).toEqual({ error: 'Checkout is temporarily unavailable. Please try again.' });
+  expect(log).toHaveBeenCalledWith(...expectedLog);
+  expect(log).toHaveBeenCalledTimes(1);
 });
 
 test('returns authoritative amounts for review without creating a session when a price changes', async () => {
