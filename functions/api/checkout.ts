@@ -59,6 +59,7 @@ export async function onRequestPost({ request, env }: CheckoutContext) {
   const params = new URLSearchParams({
     mode: 'payment',
     currency: 'eur',
+    'managed_payments[enabled]': 'false',
     'payment_intent_data[capture_method]': 'manual',
     'shipping_address_collection[allowed_countries][0]': 'ES',
     'phone_number_collection[enabled]': 'true',

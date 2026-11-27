@@ -7,7 +7,8 @@ type StripeProduct = {
 };
 
 export async function getDefaultPrice(product: Product, secret: string, env: StripeEnv) {
-  const id = env[product.stripeProductEnv] || product.stripeProductId;
+  const id = env[product.stripeProductEnv] ?? product.stripeProductId;
+  if (!id) return null;
   const url = new URL(`https://api.stripe.com/v1/products/${encodeURIComponent(id)}`);
   url.searchParams.append('expand[]', 'default_price');
 

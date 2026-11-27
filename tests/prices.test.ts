@@ -27,7 +27,8 @@ function catalog(env: Context['env'] = { STRIPE_SECRET_KEY: 'not-a-real-key' }) 
 test('returns a cacheable catalog of current cents by storefront ID', async () => {
   const stripe = mock(async (url: URL) => {
     expect(url.searchParams.get('expand[]')).toBe('default_price');
-    return price(url.pathname.endsWith('prod_bundle_test') ? 5000 : 900);
+    const amounts: Record<string, number> = { prod_bundle_test: 3900, prod_VhyQK5ho6ZwNv9: 1100, prod_VhyQMd5IrwhtHH: 4900 };
+    return price(amounts[url.pathname.split('/').at(-1)!] ?? 900);
   });
   globalThis.fetch = stripe as unknown as typeof fetch;
   let stored: Response | undefined;
@@ -37,14 +38,14 @@ test('returns a cacheable catalog of current cents by storefront ID', async () =
 
   const result = catalog({ STRIPE_SECRET_KEY: 'not-a-real-key', STRIPE_PRODUCT_BUNDLE: 'prod_bundle_test' });
   const response = await result.response;
-  const expected = { white: 900, blue: 900, purple: 900, brown: 900, black: 900, bundle: 5000 };
+  const expected = { white: 900, blue: 900, purple: 900, brown: 900, black: 900, 'black-teacher': 1100, bundle: 3900, 'bundle-teacher': 4900 };
   expect(response.status).toBe(200);
   expect(response.headers.get('Cache-Control')).toBe('public, max-age=300');
   expect(await response.json()).toEqual(expected);
   expect(put).toHaveBeenCalledWith(request.url, expect.any(Response));
   expect(result.waitUntil).toHaveBeenCalledTimes(1);
   expect(await (await catalog().response).json()).toEqual(expected);
-  expect(stripe).toHaveBeenCalledTimes(6);
+  expect(stripe).toHaveBeenCalledTimes(8);
 });
 
 test('returns successful prices without caching a partial upstream failure', async () => {
@@ -68,4 +69,14 @@ test('missing secrets and failed Stripe requests leave the storefront on fallbac
   expect(unavailable.status).toBe(503);
   expect(unavailable.headers.get('Cache-Control')).toBe('no-store');
   expect(await unavailable.json()).toEqual({});
+});
+
+test('skips lookup for a product without a configured ID', async () => {
+  const stripe = mock(async () => price(900));
+  globalThis.fetch = stripe as unknown as typeof fetch;
+
+  const response = await catalog({ STRIPE_SECRET_KEY: 'not-a-real-key', STRIPE_PRODUCT_BLACK_TEACHER: '' }).response;
+  expect(response.status).toBe(200);
+  expect(await response.json()).not.toHaveProperty('black-teacher');
+  expect(stripe).toHaveBeenCalledTimes(7);
 });

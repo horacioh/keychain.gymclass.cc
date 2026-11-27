@@ -40,6 +40,7 @@ test('sends Stripe Price IDs, manual capture, both shipping rates and the return
     expect(Object.fromEntries(fields)).toEqual({
       mode: 'payment',
       currency: 'eur',
+      'managed_payments[enabled]': 'false',
       'payment_intent_data[capture_method]': 'manual',
       'shipping_address_collection[allowed_countries][0]': 'ES',
       'phone_number_collection[enabled]': 'true',
@@ -117,6 +118,17 @@ test('returns authoritative amounts for review without creating a session when a
   expect(response.status).toBe(409);
   expect((await response.json()).prices).toEqual({ white: 1200, bundle: 5000 });
   expect(stripe).toHaveBeenCalledTimes(2);
+});
+
+test('rejects an instructor product without a configured ID before calling Stripe', async () => {
+  const stripe = mock(() => { throw new Error('Unexpected Stripe call'); });
+  globalThis.fetch = stripe as unknown as typeof fetch;
+  const response = await order({ items: [{ id: 'black-teacher', qty: 1, unitAmount: 1100 }] }, {
+    STRIPE_SECRET_KEY: 'not-a-real-key',
+    STRIPE_PRODUCT_BLACK_TEACHER: '',
+  });
+  expect(response.status).toBe(502);
+  expect(stripe).not.toHaveBeenCalled();
 });
 
 test.each([

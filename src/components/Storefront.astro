@@ -1,7 +1,7 @@
 ---
 import Site from '../layouts/Site.astro';
 import { copy } from '../config/copy';
-import { formatPrice, products, type Language } from '../config/products';
+import { formatPrice, getCompareAtPrice, isBundle, products, type Language } from '../config/products';
 
 interface Props { language: Language }
 const { language } = Astro.props;
@@ -31,25 +31,36 @@ const t = copy[language];
         data-price-changed={t.priceChanged}
       >
         <div class="products">
-          {products.map((product) => (
-            <article class="product" data-product={product.id}>
-              <div class="product-image">
-                <img src={product.image} alt={product.id === 'bundle' ? t.photoAlt : product.name[language]} width={product.id === 'bundle' ? 1000 : 1600} height={product.id === 'bundle' ? 1000 : 1600} decoding="async" loading="lazy" />
-              </div>
-              <div class="product-body">
-                <h3>{product.name[language]}</h3>
-                {product.id === 'bundle' && <p class="bundle-detail">{t.bundleDetail}</p>}
-                <div class="product-actions flex flex-wrap items-center justify-between gap-2">
-                  <p class="product-price" data-unit-price>{formatPrice(product.unitPrice, language)}</p>
-                  <div class="stepper inline-flex items-center" role="group" aria-label={product.name[language]}>
-                    <button type="button" data-step="-1" aria-label={`${t.decrement}: ${product.name[language]}`} disabled>−</button>
-                    <output data-quantity aria-live="polite">0</output>
-                    <button type="button" data-step="1" aria-label={`${t.increment}: ${product.name[language]}`}>+</button>
+          {products.map((product) => {
+            const bundle = isBundle(product.id);
+            const compareAt = getCompareAtPrice(product.id);
+            return (
+              <article class="product" data-product={product.id}>
+                <div class="product-image">
+                  <img src={product.image} alt={product.id === 'bundle' ? t.photoAlt : product.name[language]} width={bundle ? 1000 : 1600} height={bundle ? 1000 : 1600} decoding="async" loading="lazy" />
+                </div>
+                <div class="product-body">
+                  <h3>{product.name[language]}</h3>
+                  {bundle && <p class="bundle-detail">{product.id === 'bundle' ? t.bundleDetail : t.teacherBundleDetail}</p>}
+                  <div class="product-actions flex flex-wrap items-center justify-between gap-2">
+                    <p class="product-price flex flex-wrap items-baseline gap-x-2">
+                      {bundle && (
+                        <span class="text-[var(--muted)] font-normal" data-compare-at hidden={compareAt === null}>
+                          <span class="sr-only">{t.separatePrice} </span><del>{compareAt !== null ? formatPrice(compareAt, language) : ''}</del>
+                        </span>
+                      )}
+                      <span data-unit-price>{formatPrice(product.unitPrice, language)}</span>
+                    </p>
+                    <div class="stepper inline-flex items-center" role="group" aria-label={product.name[language]}>
+                      <button type="button" data-step="-1" aria-label={`${t.decrement}: ${product.name[language]}`} disabled>−</button>
+                      <output data-quantity aria-live="polite">0</output>
+                      <button type="button" data-step="1" aria-label={`${t.increment}: ${product.name[language]}`}>+</button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </article>
-          ))}
+              </article>
+            );
+          })}
         </div>
         <aside class="order" aria-labelledby="order-title">
           <div class="cart">
@@ -89,7 +100,7 @@ const t = copy[language];
 </Site>
 
 <script>
-  import { formatPrice, MAX_QUANTITY, products, type Language, type Product } from '../config/products';
+  import { formatPrice, getCompareAtPrice, getFallbackPrice, MAX_QUANTITY, products, type Language, type ProductId } from '../config/products';
 
   const store = document.querySelector<HTMLElement>('[data-store]')!;
   const language = store.dataset.language as Language;
@@ -100,9 +111,9 @@ const t = copy[language];
   const list = store.querySelector<HTMLUListElement>('[data-cart-items]')!;
   const total = store.querySelector<HTMLOutputElement>('[data-total]')!;
   const storageKey = 'bjj-keychain-cart';
-  type Id = Product['id'];
-  const cart = new Map<Id, number>();
-  const prices = new Map<Id, number>();
+  const cart = new Map<ProductId, number>();
+  const prices = new Map<ProductId, number>();
+  const priceFor = (id: ProductId) => prices.get(id) ?? getFallbackPrice(id);
 
   function updatePrices(values: unknown, preserveExisting = false) {
     if (!values || typeof values !== 'object') return;
@@ -128,6 +139,7 @@ const t = copy[language];
     return {
       product,
       unitPrice: card.querySelector<HTMLElement>('[data-unit-price]')!,
+      compareAt: card.querySelector<HTMLElement>('[data-compare-at]'),
       decrement: card.querySelector<HTMLButtonElement>('[data-step="-1"]')!,
       increment: card.querySelector<HTMLButtonElement>('[data-step="1"]')!,
       quantity: card.querySelector<HTMLOutputElement>('[data-quantity]')!,
@@ -138,10 +150,15 @@ const t = copy[language];
   function render() {
     let amount = 0;
     list.replaceChildren();
-    for (const { product, unitPrice, decrement, increment, quantity } of cards) {
+    for (const { product, unitPrice, compareAt, decrement, increment, quantity } of cards) {
       const qty = cart.get(product.id) ?? 0;
-      const cents = prices.get(product.id) ?? product.unitPrice;
+      const cents = priceFor(product.id);
       unitPrice.textContent = formatPrice(cents, language);
+      if (compareAt) {
+        const separate = getCompareAtPrice(product.id, priceFor);
+        compareAt.hidden = separate === null;
+        compareAt.querySelector('del')!.textContent = separate === null ? '' : formatPrice(separate, language);
+      }
       quantity.value = String(qty);
       decrement.disabled = pending || qty === 0;
       increment.disabled = pending || qty === MAX_QUANTITY;
@@ -162,7 +179,7 @@ const t = copy[language];
     label.textContent = (pending ? store.dataset.pending : store.dataset.checkout) ?? '';
   }
 
-  function change(id: Id, delta: number) {
+  function change(id: ProductId, delta: number) {
     const qty = (cart.get(id) ?? 0) + delta;
     if (qty < 0 || qty > MAX_QUANTITY) return;
     if (qty) cart.set(id, qty);
@@ -191,9 +208,9 @@ const t = copy[language];
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          items: products.flatMap(({ id, unitPrice }) => {
+          items: products.flatMap(({ id }) => {
             const qty = cart.get(id);
-            return qty ? [{ id, qty, unitAmount: prices.get(id) ?? unitPrice }] : [];
+            return qty ? [{ id, qty, unitAmount: priceFor(id) }] : [];
           }),
         }),
       });
