@@ -9,17 +9,17 @@ export const products = [
   { id: 'black', name: { en: 'Black belt', es: 'Cinturón negro' }, image: '/belt-black.webp', unitPrice: SINGLE_PRICE, stripeProductId: 'prod_VhbX9RG0lYJ8iE', stripeProductEnv: 'STRIPE_PRODUCT_BLACK' },
   { id: 'black-teacher', name: { en: 'Instructor black belt', es: 'Cinturón negro de instructor' }, image: '/belt-black-teacher.webp', unitPrice: 1_100, stripeProductId: 'prod_VhyQK5ho6ZwNv9', stripeProductEnv: 'STRIPE_PRODUCT_BLACK_TEACHER' },
   { id: 'bundle', name: { en: 'Full set: all 5 belts', es: 'Colección completa: los 5 cinturones' }, image: '/belt-bundle.webp', unitPrice: 3_900, stripeProductId: 'prod_VhbXBXCE5U2WUM', stripeProductEnv: 'STRIPE_PRODUCT_BUNDLE' },
-  { id: 'bundle-teacher', name: { en: 'Full set + instructor belt', es: 'Colección completa + cinturón de instructor' }, image: '/belt-bundle-teacher.webp', unitPrice: 4_900, stripeProductId: 'prod_VhyQMd5IrwhtHH', stripeProductEnv: 'STRIPE_PRODUCT_BUNDLE_TEACHER' },
+  { id: 'bundle-teacher', name: { en: 'Full set with instructor black belt', es: 'Colección completa con cinturón negro de instructor' }, image: '/belt-bundle-teacher.webp', unitPrice: 4_000, stripeProductId: 'prod_VhyQMd5IrwhtHH', stripeProductEnv: 'STRIPE_PRODUCT_BUNDLE_TEACHER' },
 ] as const;
 
 export type Product = (typeof products)[number];
 export type ProductId = Product['id'];
 export type Language = keyof Product['name'];
 
-const standardBelts = ['white', 'blue', 'purple', 'brown', 'black'] as const;
+const coloredBelts = ['white', 'blue', 'purple', 'brown'] as const;
 const bundleContents: Partial<Record<ProductId, readonly ProductId[]>> = {
-  bundle: standardBelts,
-  'bundle-teacher': [...standardBelts, 'black-teacher'],
+  bundle: [...coloredBelts, 'black'],
+  'bundle-teacher': [...coloredBelts, 'black-teacher'],
 };
 const fallbackPrices = new Map<ProductId, number>(products.map(({ id, unitPrice }) => [id, unitPrice]));
 

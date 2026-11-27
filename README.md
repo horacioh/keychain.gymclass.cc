@@ -15,12 +15,12 @@ Use `bun run dev` to work on the static storefront without the checkout function
 
 ## Stripe setup
 
-1. In Stripe test mode, create six individual products (white, blue, purple, brown, standard black, instructor black) and two bundle products (the five standard belts, and the five standard belts plus instructor black).
+1. In Stripe test mode, create six individual products (white, blue, purple, brown, standard black, instructor black) and two five-belt bundle products: each includes white, blue, purple, and brown, plus either standard black or instructor black.
 2. Give each product an active one-time EUR price and set it as the product's **default price**. The site uses the Product IDs (`prod_…`) in `src/config/products.ts`. For a different catalog, override them with the `STRIPE_PRODUCT_*` bindings listed in `.dev.vars.example`. The previous `STRIPE_PRICE_*` bindings are no longer used.
 3. Set `STRIPE_SECRET_KEY` to the secret key for the same catalog and mode as those Product IDs. Use a test key for local and preview environments.
 4. To change a price, create a new one-time EUR price in Stripe and set it as the product's default. No site edit, webhook or redeploy is needed.
 
-The storefront starts with static fallback prices (€9 per standard belt, €11 for instructor black, €39 for the standard bundle, and €49 for the instructor bundle) and loads Stripe prices through `/api/prices`. A complete catalog is cached for five minutes. Each bundle shows the sum of its individual belt prices crossed out if that sum exceeds the bundle price. Checkout always checks the current Stripe defaults, and if a displayed price is stale, it updates the cart and asks the buyer to review it before starting payment.
+The storefront starts with static fallback prices (€9 per standard belt, €11 for instructor black, €39 for the standard bundle, and €40 for the instructor bundle) and loads Stripe prices through `/api/prices`. A complete catalog is cached for five minutes. Each bundle shows the sum of its individual belt prices crossed out if that sum exceeds the bundle price. Checkout always checks the current Stripe defaults, and if a displayed price is stale, it updates the cart and asks the buyer to review it before starting payment.
 
 Checkout offers free hand delivery at the academy or €5 shipping to peninsular Spain. Stripe collects a phone number and a Spanish shipping address whichever option is picked. The country filter accepts all Spanish addresses; verify that the destination is in peninsular Spain before capturing an order with shipping.
 

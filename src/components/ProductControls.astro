@@ -1,0 +1,24 @@
+---
+import { formatPrice, getCompareAtPrice, isBundle, type Language, type Product } from '../config/products';
+import { copy } from '../config/copy';
+
+interface Props { product: Product; language: Language }
+const { product, language } = Astro.props;
+const t = copy[language];
+const compareAt = getCompareAtPrice(product.id);
+---
+<div class="product-actions flex flex-wrap items-center justify-between gap-2" data-product-controls>
+  <p class="product-price flex flex-wrap items-baseline gap-x-2">
+    {isBundle(product.id) && (
+      <span class="text-[var(--muted)] font-normal" data-compare-at hidden={compareAt === null}>
+        <span class="sr-only">{t.separatePrice} </span><del>{compareAt !== null ? formatPrice(compareAt, language) : ''}</del>
+      </span>
+    )}
+    <span data-unit-price>{formatPrice(product.unitPrice, language)}</span>
+  </p>
+  <div class="stepper inline-flex items-center" role="group" aria-label={product.name[language]}>
+    <button type="button" data-step="-1" aria-label={`${t.decrement}: ${product.name[language]}`} disabled>−</button>
+    <output data-quantity aria-live="polite">0</output>
+    <button type="button" data-step="1" aria-label={`${t.increment}: ${product.name[language]}`}>+</button>
+  </div>
+</div>

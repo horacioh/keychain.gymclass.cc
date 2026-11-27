@@ -1,7 +1,8 @@
 ---
 import Site from '../layouts/Site.astro';
-import { copy } from '../config/copy';
-import { formatPrice, getCompareAtPrice, isBundle, products, type Language } from '../config/products';
+import ProductControls from './ProductControls.astro';
+import { copy, productDescriptions } from '../config/copy';
+import { formatPrice, isBundle, products, type Language } from '../config/products';
 
 interface Props { language: Language }
 const { language } = Astro.props;
@@ -33,31 +34,30 @@ const t = copy[language];
         <div class="products">
           {products.map((product) => {
             const bundle = isBundle(product.id);
-            const compareAt = getCompareAtPrice(product.id);
+            const alt = product.id === 'bundle' ? t.bundleAlt : product.id === 'bundle-teacher' ? t.teacherBundleAlt : product.name[language];
+            const size = bundle ? 1000 : 1600;
+            const dialogId = `details-${product.id}`;
             return (
               <article class="product" data-product={product.id}>
-                <div class="product-image">
-                  <img src={product.image} alt={product.id === 'bundle' ? t.bundleAlt : product.name[language]} width={bundle ? 1000 : 1600} height={bundle ? 1000 : 1600} decoding="async" loading="lazy" />
-                </div>
+                <button class="product-image product-trigger" type="button" data-open-details aria-haspopup="dialog" aria-controls={dialogId} aria-label={product.name[language]}>
+                  <img src={product.image} alt={alt} width={size} height={size} decoding="async" loading="lazy" />
+                </button>
                 <div class="product-body">
-                  <h3>{product.name[language]}</h3>
+                  <h3><button class="product-trigger" type="button" data-open-details aria-haspopup="dialog" aria-controls={dialogId}>{product.name[language]}</button></h3>
                   {bundle && <p class="bundle-detail">{product.id === 'bundle' ? t.bundleDetail : t.teacherBundleDetail}</p>}
-                  <div class="product-actions flex flex-wrap items-center justify-between gap-2">
-                    <p class="product-price flex flex-wrap items-baseline gap-x-2">
-                      {bundle && (
-                        <span class="text-[var(--muted)] font-normal" data-compare-at hidden={compareAt === null}>
-                          <span class="sr-only">{t.separatePrice} </span><del>{compareAt !== null ? formatPrice(compareAt, language) : ''}</del>
-                        </span>
-                      )}
-                      <span data-unit-price>{formatPrice(product.unitPrice, language)}</span>
-                    </p>
-                    <div class="stepper inline-flex items-center" role="group" aria-label={product.name[language]}>
-                      <button type="button" data-step="-1" aria-label={`${t.decrement}: ${product.name[language]}`} disabled>−</button>
-                      <output data-quantity aria-live="polite">0</output>
-                      <button type="button" data-step="1" aria-label={`${t.increment}: ${product.name[language]}`}>+</button>
+                  <ProductControls product={product} language={language} />
+                </div>
+                <dialog class="product-dialog" id={dialogId} aria-labelledby={`${dialogId}-title`} aria-describedby={`${dialogId}-description`}>
+                  <div class="product-dialog-content">
+                    <button class="product-dialog-close" type="button" data-close-details autofocus aria-label={t.closeDetails}>×</button>
+                    <img class="product-dialog-image" src={product.image} alt={alt} width={size} height={size} decoding="async" loading="lazy" />
+                    <div class="product-dialog-body">
+                      <h2 id={`${dialogId}-title`}>{product.name[language]}</h2>
+                      <p id={`${dialogId}-description`}>{productDescriptions[language][product.id]}</p>
+                      <ProductControls product={product} language={language} />
                     </div>
                   </div>
-                </div>
+                </dialog>
               </article>
             );
           })}
@@ -136,13 +136,32 @@ const t = copy[language];
 
   const cards = products.map(product => {
     const card = store.querySelector<HTMLElement>(`[data-product="${product.id}"]`)!;
+    const dialog = card.querySelector('dialog')!;
+    let opener: HTMLButtonElement | undefined;
+    for (const trigger of card.querySelectorAll<HTMLButtonElement>('[data-open-details]')) {
+      trigger.addEventListener('click', () => {
+        opener = trigger;
+        dialog.showModal();
+      });
+    }
+    dialog.querySelector('[data-close-details]')!.addEventListener('click', () => dialog.close());
+    dialog.addEventListener('close', () => {
+      if (!dialog.open) opener?.focus({ preventScroll: true });
+    });
+    let backdropPressed = false;
+    dialog.addEventListener('pointerdown', event => { backdropPressed = event.target === dialog; });
+    dialog.addEventListener('click', event => {
+      if (backdropPressed && event.target === dialog) dialog.close();
+    });
     return {
       product,
-      unitPrice: card.querySelector<HTMLElement>('[data-unit-price]')!,
-      compareAt: card.querySelector<HTMLElement>('[data-compare-at]'),
-      decrement: card.querySelector<HTMLButtonElement>('[data-step="-1"]')!,
-      increment: card.querySelector<HTMLButtonElement>('[data-step="1"]')!,
-      quantity: card.querySelector<HTMLOutputElement>('[data-quantity]')!,
+      controls: Array.from(card.querySelectorAll('[data-product-controls]'), controls => ({
+        unitPrice: controls.querySelector<HTMLElement>('[data-unit-price]')!,
+        compareAt: controls.querySelector<HTMLElement>('[data-compare-at]'),
+        decrement: controls.querySelector<HTMLButtonElement>('[data-step="-1"]')!,
+        increment: controls.querySelector<HTMLButtonElement>('[data-step="1"]')!,
+        quantity: controls.querySelector<HTMLOutputElement>('[data-quantity]')!,
+      })),
     };
   });
 
@@ -150,18 +169,20 @@ const t = copy[language];
   function render() {
     let amount = 0;
     list.replaceChildren();
-    for (const { product, unitPrice, compareAt, decrement, increment, quantity } of cards) {
+    for (const { product, controls } of cards) {
       const qty = cart.get(product.id) ?? 0;
       const cents = priceFor(product.id);
-      unitPrice.textContent = formatPrice(cents, language);
-      if (compareAt) {
-        const separate = getCompareAtPrice(product.id, priceFor);
-        compareAt.hidden = separate === null;
-        compareAt.querySelector('del')!.textContent = separate === null ? '' : formatPrice(separate, language);
+      for (const { unitPrice, compareAt, decrement, increment, quantity } of controls) {
+        unitPrice.textContent = formatPrice(cents, language);
+        if (compareAt) {
+          const separate = getCompareAtPrice(product.id, priceFor);
+          compareAt.hidden = separate === null;
+          compareAt.querySelector('del')!.textContent = separate === null ? '' : formatPrice(separate, language);
+        }
+        quantity.value = String(qty);
+        decrement.disabled = pending || qty === 0;
+        increment.disabled = pending || qty === MAX_QUANTITY;
       }
-      quantity.value = String(qty);
-      decrement.disabled = pending || qty === 0;
-      increment.disabled = pending || qty === MAX_QUANTITY;
       if (!qty) continue;
       const line = document.createElement('li');
       const productLabel = document.createElement('span');
@@ -193,9 +214,11 @@ const t = copy[language];
     render();
   }
 
-  for (const { product, decrement, increment } of cards) {
-    decrement.addEventListener('click', () => change(product.id, -1));
-    increment.addEventListener('click', () => change(product.id, 1));
+  for (const { product, controls } of cards) {
+    for (const { decrement, increment } of controls) {
+      decrement.addEventListener('click', () => change(product.id, -1));
+      increment.addEventListener('click', () => change(product.id, 1));
+    }
   }
 
   checkout.addEventListener('click', async () => {

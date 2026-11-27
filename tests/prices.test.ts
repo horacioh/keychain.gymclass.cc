@@ -27,7 +27,7 @@ function catalog(env: Context['env'] = { STRIPE_SECRET_KEY: 'not-a-real-key' }) 
 test('returns a cacheable catalog of current cents by storefront ID', async () => {
   const stripe = mock(async (url: URL) => {
     expect(url.searchParams.get('expand[]')).toBe('default_price');
-    const amounts: Record<string, number> = { prod_bundle_test: 3900, prod_VhyQK5ho6ZwNv9: 1100, prod_VhyQMd5IrwhtHH: 4900 };
+    const amounts: Record<string, number> = { prod_bundle_test: 3900, prod_VhyQK5ho6ZwNv9: 1100, prod_VhyQMd5IrwhtHH: 4000 };
     return price(amounts[url.pathname.split('/').at(-1)!] ?? 900);
   });
   globalThis.fetch = stripe as unknown as typeof fetch;
@@ -38,7 +38,7 @@ test('returns a cacheable catalog of current cents by storefront ID', async () =
 
   const result = catalog({ STRIPE_SECRET_KEY: 'not-a-real-key', STRIPE_PRODUCT_BUNDLE: 'prod_bundle_test' });
   const response = await result.response;
-  const expected = { white: 900, blue: 900, purple: 900, brown: 900, black: 900, 'black-teacher': 1100, bundle: 3900, 'bundle-teacher': 4900 };
+  const expected = { white: 900, blue: 900, purple: 900, brown: 900, black: 900, 'black-teacher': 1100, bundle: 3900, 'bundle-teacher': 4000 };
   expect(response.status).toBe(200);
   expect(response.headers.get('Cache-Control')).toBe('public, max-age=300');
   expect(await response.json()).toEqual(expected);

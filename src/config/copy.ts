@@ -1,3 +1,28 @@
+import type { Language, ProductId } from './products';
+
+export const productDescriptions = {
+  en: {
+    white: 'A white belt keychain for the first steps on the mats. Rearrange the four white stripe rings set between black rings to match your rank.',
+    blue: 'A blue belt keychain to mark the move up from white. Rearrange the four white stripe rings set between black rings as you earn them.',
+    purple: 'A purple belt keychain for the years you’ve put in. Its black rank bar includes four white stripe rings that you can rearrange.',
+    brown: 'A brown belt keychain for the stretch before black. Move the four white stripe rings along the black rank bar to match your rank.',
+    black: 'The standard black belt keychain has a red rank bar with six white stripe rings. Unscrew the cap to rearrange them.',
+    'black-teacher': 'The instructor black belt has six white stripe rings along the red rank bar, framed by a wide white band at each end. Unscrew the cap to rearrange the stripes.',
+    bundle: 'Five keychains: white, blue, purple, brown, and standard black. Each includes its own rearrangeable stripe rings.',
+    'bundle-teacher': 'Five keychains: white, blue, purple, brown, and instructor black instead of standard black. The instructor belt has six white stripe rings and wide white bands at both ends of its red rank bar.',
+  },
+  es: {
+    white: 'Un llavero de cinturón blanco para tus primeros pasos en el tatami. Reordena los cuatro aros blancos de la barra negra para mostrar tu grado.',
+    blue: 'Un llavero de cinturón azul para recordar el paso del blanco al azul. Reordena los cuatro aros blancos entre los negros a medida que ganes rayas.',
+    purple: 'Un llavero de cinturón morado para recordar los años de entrenamiento. Su barra negra lleva cuatro aros blancos que puedes reordenar.',
+    brown: 'Un llavero de cinturón marrón para la etapa previa al negro. Mueve los cuatro aros blancos de la barra negra para mostrar tu grado.',
+    black: 'El cinturón negro estándar tiene una barra roja con seis aros blancos. Desenrosca el tapón para reordenarlos.',
+    'black-teacher': 'El cinturón negro de instructor tiene seis aros blancos en la barra roja y una franja blanca ancha en cada extremo. Desenrosca el tapón para reordenar las rayas.',
+    bundle: 'Cinco llaveros: blanco, azul, morado, marrón y negro estándar. Cada uno incluye sus propios aros de rayas que puedes reordenar.',
+    'bundle-teacher': 'Cinco llaveros: blanco, azul, morado, marrón y negro de instructor en lugar del negro estándar. El cinturón de instructor tiene seis aros blancos y una franja blanca ancha en cada extremo de la barra roja.',
+  },
+} satisfies Record<Language, Record<ProductId, string>>;
+
 export const copy = {
   en: {
     home: '/', otherHome: '/es/', otherLanguage: 'Español', otherLang: 'es',
@@ -8,8 +33,10 @@ export const copy = {
     bundleAlt: 'Five BJJ belt keychains in white, blue, purple, brown, and standard black',
     shopTitle: 'Pick your belt', shopText: 'One for your current rank, or the full set for the journey.',
     bundleDetail: 'White, blue, purple, brown and black.', decrement: 'Remove one', increment: 'Add one',
-    teacherBundleDetail: 'All five standard belts plus the instructor black belt.',
+    teacherBundleDetail: 'White, blue, purple, brown and instructor black.',
+    teacherBundleAlt: 'Five BJJ belt keychains in white, blue, purple, brown, and instructor black',
     separatePrice: 'Bought separately:',
+    closeDetails: 'Close product details',
     cartTitle: 'Your order', empty: 'Choose a belt to start your order.', total: 'Total before shipping',
     checkout: 'Checkout', pending: 'Opening checkout…', checkoutError: 'We couldn’t open checkout. Please try again.',
     priceChanged: 'Prices have changed. Please review your updated order before checking out.',
@@ -35,8 +62,10 @@ export const copy = {
     bundleAlt: 'Cinco llaveros de cinturón de BJJ: blanco, azul, morado, marrón y negro estándar',
     shopTitle: 'Elige tu cinturón', shopText: 'El de tu grado actual o la colección completa para todo el recorrido.',
     bundleDetail: 'Blanco, azul, morado, marrón y negro.', decrement: 'Quitar uno', increment: 'Añadir uno',
-    teacherBundleDetail: 'Los cinco cinturones estándar más el negro de instructor.',
+    teacherBundleDetail: 'Blanco, azul, morado, marrón y negro de instructor.',
+    teacherBundleAlt: 'Cinco llaveros de cinturón de BJJ: blanco, azul, morado, marrón y negro de instructor',
     separatePrice: 'Por separado:',
+    closeDetails: 'Cerrar detalles del producto',
     cartTitle: 'Tu pedido', empty: 'Elige un cinturón para empezar tu pedido.', total: 'Total sin envío',
     checkout: 'Ir al pago', pending: 'Abriendo el pago…', checkoutError: 'No pudimos abrir el pago. Inténtalo de nuevo.',
     priceChanged: 'Los precios han cambiado. Revisa tu pedido actualizado antes de ir al pago.',
