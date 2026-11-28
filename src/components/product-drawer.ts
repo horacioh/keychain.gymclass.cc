@@ -64,7 +64,10 @@ export function setupProductDrawer(dialog: HTMLDialogElement, mobile: MediaQuery
     const dx = x - drag.x;
     const dy = y - drag.y;
     if (!drag.active) {
-      if (Math.max(Math.abs(dx), Math.abs(dy)) < DRAG_SLOP) return;
+      if (Math.max(Math.abs(dx), Math.abs(dy)) < DRAG_SLOP) {
+        if (drag.source === 'touch' && dy > Math.abs(dx) && dialog.scrollTop <= 0 && !claimGesture(false)) resetDrag();
+        return;
+      }
       if (Math.abs(dx) >= Math.abs(dy) || dialog.scrollTop > 0 || (dy < 0 && !drag.allowUpward)) {
         resetDrag();
         return;
