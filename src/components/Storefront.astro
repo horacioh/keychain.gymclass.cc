@@ -107,7 +107,10 @@ const t = copy[language];
 </Site>
 
 <script>
+  import { trackOpenPanel } from '../config/openpanel-web';
   import { formatPrice, getCompareAtPrice, getFallbackPrice, MAX_QUANTITY, products, type Language, type ProductId } from '../config/products';
+
+  const trackAnalytics = import.meta.env.PUBLIC_OPENPANEL_CLIENT_ID ? trackOpenPanel : undefined;
 
   const store = document.querySelector<HTMLElement>('[data-store]')!;
   const language = store.dataset.language as Language;
@@ -149,6 +152,7 @@ const t = copy[language];
       trigger.addEventListener('click', () => {
         opener = trigger;
         dialog.showModal();
+        trackAnalytics?.('product_dialog_opened', { product_id: product.id, locale: language });
       });
     }
     dialog.querySelector('[data-close-details]')!.addEventListener('click', () => dialog.close());
@@ -212,6 +216,7 @@ const t = copy[language];
     if (qty < 0 || qty > MAX_QUANTITY) return;
     if (qty) cart.set(id, qty);
     else cart.delete(id);
+    if (delta > 0) trackAnalytics?.('add_to_cart', { product_id: id, quantity: qty, locale: language });
     try {
       sessionStorage.setItem(storageKey, JSON.stringify(Object.fromEntries(cart)));
     } catch {
@@ -231,6 +236,7 @@ const t = copy[language];
   checkout.addEventListener('click', async () => {
     if (pending || !cart.size) return;
     pending = true;
+    trackAnalytics?.('checkout_started', { product_count: cart.size, locale: language });
     error.hidden = true;
     render();
     try {

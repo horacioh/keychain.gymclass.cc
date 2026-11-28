@@ -21,9 +21,9 @@ function order(body: unknown, env: Context['env'] = {
   STRIPE_SECRET_KEY: 'not-a-real-key',
   STRIPE_PRODUCT_WHITE: 'prod_white_test',
   STRIPE_PRODUCT_BUNDLE: 'prod_bundle_test',
-}) {
+}, waitUntil?: Context['waitUntil']) {
   const request = new Request(`${origin}/api/checkout`, { method: 'POST', body: JSON.stringify(body) });
-  return onRequestPost({ request, env });
+  return onRequestPost({ request, env, waitUntil });
 }
 
 test('sends Stripe Price IDs, manual capture, both shipping rates and the return URLs', async () => {
@@ -68,6 +68,76 @@ test('sends Stripe Price IDs, manual capture, both shipping rates and the return
   expect(response.status).toBe(200);
   expect(await response.json()).toEqual({ url: checkoutUrl });
   expect(stripe.mock.calls.at(-1)?.[0]).toBe(sessions);
+});
+
+test.each([
+  ['default API URL', undefined, 'https://openpanelapi.hhg.app/track'],
+  ['custom API URL', 'https://analytics.example.test/ingest/', 'https://analytics.example.test/ingest/track'],
+] as const)('queues checkout analytics with the %s without waiting for OpenPanel or including customer and Stripe session data', async (_, apiUrl, analyticsUrl) => {
+  let rejectAnalytics!: (reason: Error) => void;
+  const analyticsResponse = new Promise<Response>((_, reject) => { rejectAnalytics = reject; });
+  const fetchMock = mock(async (url: string | URL, _init: RequestInit) => {
+    if (url instanceof URL) return stripeProduct('price_white_test', 900);
+    if (url === sessions) return Response.json({ url: checkoutUrl, id: 'cs_test_example' });
+    return analyticsResponse;
+  });
+  globalThis.fetch = fetchMock as unknown as typeof fetch;
+  const waitUntil = mock((_promise: Promise<unknown>) => {});
+  const response = await order({ language: 'es', email: 'not-forwarded@example.test', items: [{ id: 'white', qty: 2, unitAmount: 900 }] }, {
+    STRIPE_SECRET_KEY: 'not-a-real-key',
+    OPENPANEL_API_URL: apiUrl,
+    OPENPANEL_CLIENT_ID: 'backend-client',
+    OPENPANEL_CLIENT_SECRET: 'backend-secret',
+  }, waitUntil);
+
+  expect(response.status).toBe(200);
+  expect(await response.json()).toEqual({ url: checkoutUrl });
+  expect(fetchMock.mock.calls.map(([url]) => String(url)).slice(1)).toEqual([sessions, analyticsUrl]);
+  expect(waitUntil).toHaveBeenCalledTimes(1);
+  const [, init] = fetchMock.mock.calls[2]!;
+  expect(init.redirect).toBe('error');
+  expect(init.headers).toEqual({
+    'Content-Type': 'application/json',
+    'openpanel-client-id': 'backend-client',
+    'openpanel-client-secret': 'backend-secret',
+  });
+  expect(JSON.parse(String(init.body))).toEqual({
+    type: 'track',
+    payload: {
+      name: 'checkout_session_created',
+      properties: {
+        products: [{ id: 'white', quantity: 2 }],
+        subtotal_cents: 1800,
+        currency: 'EUR',
+        locale: 'es',
+      },
+    },
+  });
+  rejectAnalytics(new Error('OpenPanel unavailable'));
+  expect(await waitUntil.mock.calls[0]![0]).toBeUndefined();
+});
+
+test.each([
+  ['incomplete analytics credentials', false],
+  ['an unsuccessful Stripe checkout', true],
+] as const)('does not queue analytics with %s', async (_, stripeFails) => {
+  const fetchMock = mock(async (url: string | URL) => {
+    if (url instanceof URL) return stripeProduct('price_white_test', 900);
+    expect(url).toBe(sessions);
+    return stripeFails ? Response.json({ url: null }) : Response.json({ url: checkoutUrl });
+  });
+  globalThis.fetch = fetchMock as unknown as typeof fetch;
+  console.error = mock(() => {});
+  const waitUntil = mock((_promise: Promise<unknown>) => {});
+  const response = await order({ items: [{ id: 'white', qty: 1, unitAmount: 900 }] }, {
+    STRIPE_SECRET_KEY: 'not-a-real-key',
+    OPENPANEL_CLIENT_ID: 'backend-client',
+    OPENPANEL_CLIENT_SECRET: stripeFails ? 'backend-secret' : undefined,
+  }, waitUntil);
+
+  expect(response.status).toBe(stripeFails ? 502 : 200);
+  expect(fetchMock).toHaveBeenCalledTimes(2);
+  expect(waitUntil).not.toHaveBeenCalled();
 });
 
 test.each([

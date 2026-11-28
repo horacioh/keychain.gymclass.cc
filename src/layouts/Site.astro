@@ -2,6 +2,7 @@
 import '@fontsource-variable/inter';
 import '@fontsource-variable/inter-tight';
 import '../styles/global.css';
+import OpenPanel from '../components/OpenPanel.astro';
 import { copy } from '../config/copy';
 import { legalCopy, legalDocuments, legalPath, type LegalDocument } from '../config/legal';
 import type { Language } from '../config/products';
@@ -40,6 +41,7 @@ const socialImageAlt = `${t.title.replace('\n', ' ')} ${t.photoAlt}.`;
     <title>{pageTitle}</title>
   </head>
   <body>
+    {import.meta.env.PUBLIC_OPENPANEL_CLIENT_ID?.trim() && <OpenPanel />}
     <header class="site-header">
       <div class="wrap flex items-center justify-between gap-4">
         <a class="wordmark inline-flex items-center gap-2.5" href={t.home}>
