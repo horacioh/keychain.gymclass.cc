@@ -40,3 +40,5 @@ An authorization may appear as a pending hold on the customer’s account. Strip
 Use the `keychain-gymclass` Pages project for the `horacioh/keychain.gymclass.cc` GitHub repository. Use the project root as the build root, `bun run build` as the build command, and `dist` as the output directory. Keep the root `functions/` directory beside that output so Pages includes the checkout function. For a manual deploy, build locally and run `npx wrangler pages deploy dist` from the project root.
 
 Add `STRIPE_SECRET_KEY` and any product ID overrides in the Pages project’s **Settings → Variables and Secrets**. Set preview and production independently, using live-mode Stripe products and the live key only in production. Attach `keychain.gymclass.cc` under **Custom domains** and verify a full Stripe test-mode checkout before switching production to live mode.
+
+To require agreement to the terms at Stripe Checkout, set the terms of service URL in the Stripe Dashboard’s public details first, then set the Pages runtime variable `STRIPE_REQUIRE_TERMS=true`. Leave the variable unset until the URL is configured; Stripe rejects the Checkout Session otherwise.

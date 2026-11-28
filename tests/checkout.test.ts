@@ -71,6 +71,29 @@ test('sends Stripe Price IDs, manual capture, both shipping rates and the return
 });
 
 test.each([
+  ['true', 'required', 'es', '/es/'],
+  ['false', null, 'https://elsewhere.example', '/'],
+])('controls Stripe terms consent with STRIPE_REQUIRE_TERMS=%s and returns to the storefront locale', async (setting, consent, language, home) => {
+  const stripe = mock(async (url: string | URL, init: RequestInit) => {
+    if (url instanceof URL) return stripeProduct('price_white_test', 900);
+    const fields = init.body as URLSearchParams;
+    expect(fields.get('consent_collection[terms_of_service]')).toBe(consent);
+    expect(fields.get('success_url')).toBe(`${origin}${home}thanks?session_id={CHECKOUT_SESSION_ID}`);
+    expect(fields.get('cancel_url')).toBe(`${origin}${home}#shop`);
+    return Response.json({ url: checkoutUrl });
+  });
+  globalThis.fetch = stripe as unknown as typeof fetch;
+
+  const response = await order({ language, items: [{ id: 'white', qty: 1, unitAmount: 900 }] }, {
+    STRIPE_SECRET_KEY: 'not-a-real-key',
+    STRIPE_PRODUCT_WHITE: 'prod_white_test',
+    STRIPE_REQUIRE_TERMS: setting,
+  });
+  expect(response.status).toBe(200);
+  expect(stripe.mock.calls.at(-1)?.[0]).toBe(sessions);
+});
+
+test.each([
   ['empty', []],
   ['all-zero', [{ id: 'white', qty: 0, unitAmount: 900 }, { id: 'bundle', qty: 0, unitAmount: 5000 }]],
   ['unknown product', [{ id: 'green', qty: 1, unitAmount: 900 }]],

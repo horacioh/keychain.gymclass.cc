@@ -46,6 +46,7 @@ export const copy = {
     priceChanged: 'Prices have changed. Please review your updated order before checking out.',
     deliveryTitle: 'Pickup or shipping', delivery: 'Free hand delivery at the academy, or €5 shipping to peninsular Spain. Choose at checkout.',
     charge: 'Payment is authorized at checkout and only charged once I confirm your order.',
+    reviewTerms: 'Read the terms of sale before checking out.',
     faqTitle: 'Good to know',
     faq: [
       ['How do the stripes work?', 'The white, blue, purple, and brown belts have four white stripe rings. Both black belts have six, and the instructor belt adds two wide white bands. To show fewer stripes, unscrew the cap and group any unused stripe rings together.'],
@@ -79,6 +80,7 @@ export const copy = {
     priceChanged: 'Los precios han cambiado. Revisa tu pedido actualizado antes de ir al pago.',
     deliveryTitle: 'Recogida o envío', delivery: 'Entrega gratuita en mano en la academia o envío a España peninsular por 5 €. Elige al finalizar el pedido.',
     charge: 'El pago se autoriza al hacer el pedido y solo se cobra cuando lo confirme.',
+    reviewTerms: 'Lee las condiciones de venta antes de continuar al pago.',
     faqTitle: 'Preguntas frecuentes',
     faq: [
       ['¿Cómo funcionan las rayas?', 'Los cinturones blanco, azul, morado y marrón tienen cuatro aros blancos. Los dos cinturones negros tienen seis, y el de instructor lleva además dos franjas blancas anchas. Para mostrar menos rayas, desenrosca el tapón y agrupa los aros que no uses.'],

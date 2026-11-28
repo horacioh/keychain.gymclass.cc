@@ -1,0 +1,38 @@
+---
+import Site from '../layouts/Site.astro';
+import { legalCopy, type LegalDocument } from '../config/legal';
+import type { Language } from '../config/products';
+
+interface Props { language: Language; document: LegalDocument }
+const { language, document } = Astro.props;
+const page = legalCopy[language][document];
+---
+
+<Site language={language} title={page.title} description={page.description} legalDocument={document}>
+  <main class="wrap legal-page">
+    <article>
+      <header>
+        <h1>{page.title}</h1>
+        <p>{page.description}</p>
+      </header>
+      {page.sections.map(({ heading, paragraphs, link }) => (
+        <section>
+          <h2>{heading}</h2>
+          {paragraphs.map(paragraph => <p>{paragraph}</p>)}
+          {link && <p><a href={link.href}>{link.label}</a></p>}
+        </section>
+      ))}
+    </article>
+  </main>
+</Site>
+
+<style>
+  .legal-page { padding-block: clamp(42px, 8vw, 100px); min-height: 65vh; }
+  article { width: min(100%, 68ch); }
+  header { margin-bottom: clamp(34px, 6vw, 56px); }
+  h1 { font-size: clamp(2.5rem, 6vw, 4.75rem); line-height: 1; letter-spacing: -.044em; }
+  h2 { font-size: clamp(1.2rem, 2.6vw, 1.5rem); line-height: 1.2; }
+  section + section { margin-top: 32px; }
+  p { margin-top: 10px; line-height: 1.65; color: var(--muted); white-space: pre-line; overflow-wrap: anywhere; }
+  a { color: var(--ink); text-decoration: underline; text-underline-offset: .2em; }
+</style>
