@@ -109,7 +109,10 @@ body:has(.product-dialog[open]) { overflow: hidden; }
     border-radius: 18px 18px 0 0; border-inline: 0; border-bottom: 0;
     touch-action: pan-x pinch-zoom;
   }
-  .product-dialog[data-sheet-scrollable] { touch-action: pan-x pan-down pinch-zoom; }
+  .product-dialog[data-sheet-scrollable] {
+    touch-action: auto;
+    touch-action: pan-x pan-down pinch-zoom;
+  }
   .product-dialog[data-sheet-scrolled] { touch-action: auto; }
   .product-dialog[open] {
     transform: translateY(var(--sheet-offset, 0px));
