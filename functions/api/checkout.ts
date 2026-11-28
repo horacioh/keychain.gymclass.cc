@@ -1,10 +1,10 @@
 import type { PagesFunction } from '@cloudflare/workers-types';
 import { MAX_QUANTITY, products, type Product } from '../../src/config/products';
+import { getDefaultPrice, type StripeEnv } from '../../src/config/stripe';
 
-type Env = Partial<Record<'STRIPE_SECRET_KEY' | Product['stripePriceEnv'], string>>;
-type WorkerContext = Parameters<PagesFunction<Env>>[0];
-type CheckoutContext = { request: Pick<WorkerContext['request'], 'url' | 'json'>; env: Env };
-type Item = { product: Product; qty: number };
+type WorkerContext = Parameters<PagesFunction<StripeEnv>>[0];
+type CheckoutContext = { request: Pick<WorkerContext['request'], 'url' | 'json'>; env: StripeEnv };
+type Item = { product: Product; qty: number; unitAmount: number };
 
 function parseItems(body: unknown): Item[] | null {
   if (!body || typeof body !== 'object' || !('items' in body)) return null;
@@ -15,11 +15,12 @@ function parseItems(body: unknown): Item[] | null {
   const selection: Item[] = [];
   for (const item of items) {
     if (!item || typeof item !== 'object') return null;
-    const { id, qty } = item;
+    const { id, qty, unitAmount } = item;
     const product = products.find(candidate => candidate.id === id);
     if (!product || seen.has(product.id) || !Number.isInteger(qty) || qty < 1 || qty > MAX_QUANTITY) return null;
+    if (!Number.isSafeInteger(unitAmount) || unitAmount < 0) return null;
     seen.add(product.id);
-    selection.push({ product, qty });
+    selection.push({ product, qty, unitAmount });
   }
   return selection;
 }
@@ -36,8 +37,22 @@ export async function onRequestPost({ request, env }: CheckoutContext) {
   if (!selection) return Response.json({ error: 'Select at least one valid product with a quantity from 1 to 20.' }, { status: 400 });
 
   const secret = env.STRIPE_SECRET_KEY;
-  if (!secret || selection.some(({ product }) => !env[product.stripePriceEnv])) {
+  if (!secret) {
     return Response.json({ error: 'Checkout is not configured.' }, { status: 503 });
+  }
+
+  const priced = await Promise.all(selection.map(async item => {
+    const price = await getDefaultPrice(item.product, secret, env);
+    return price ? { ...item, price } : null;
+  }));
+  const resolved = priced.filter(item => item !== null);
+  if (resolved.length !== selection.length) return stripeUnavailable();
+
+  if (resolved.some(({ unitAmount, price }) => unitAmount !== price.amount)) {
+    return Response.json({
+      error: 'Prices changed. Please review your order.',
+      prices: Object.fromEntries(resolved.map(({ product, price }) => [product.id, price.amount])),
+    }, { status: 409 });
   }
 
   const { origin } = new URL(request.url);
@@ -52,8 +67,8 @@ export async function onRequestPost({ request, env }: CheckoutContext) {
     success_url: `${origin}/thanks?session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${origin}/#shop`,
   });
-  selection.forEach(({ product, qty }, index) => {
-    params.set(`line_items[${index}][price]`, env[product.stripePriceEnv]!);
+  resolved.forEach(({ price, qty }, index) => {
+    params.set(`line_items[${index}][price]`, price.id);
     params.set(`line_items[${index}][quantity]`, String(qty));
   });
   ['Hand delivery at the academy', 'Shipping, Spain peninsular'].forEach((name, index) => {

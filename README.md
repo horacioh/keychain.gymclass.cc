@@ -15,10 +15,12 @@ Use `bun run dev` to work on the static storefront without the checkout function
 
 ## Stripe setup
 
-1. In Stripe test mode, create one product for each belt colour (white, blue, purple, brown, black) and a sixth product for the five-belt bundle.
-2. Give each product a one-time EUR price. In **Product catalogue**, open the product and find the price under **Pricing**. Open the price or use its menu to copy the **Price ID** (starting with `price_`, not the `prod_` Product ID). Set `STRIPE_PRICE_WHITE`, `STRIPE_PRICE_BLUE`, `STRIPE_PRICE_PURPLE`, `STRIPE_PRICE_BROWN`, `STRIPE_PRICE_BLACK`, and `STRIPE_PRICE_BUNDLE` to the matching IDs.
-3. Set `STRIPE_SECRET_KEY` to the matching Stripe-mode secret key. Use a test key for local and preview environments.
-4. The displayed prices in `src/config/products.ts` are €12 for one belt and €50 for the bundle. Keep them in sync with Stripe. The server sends Stripe the configured Price IDs and quantities, and Stripe’s prices determine the actual charge.
+1. In Stripe test mode, create six individual products (white, blue, purple, brown, standard black, instructor black) and two five-belt bundle products: each includes white, blue, purple, and brown, plus either standard black or instructor black.
+2. Give each product an active one-time EUR price and set it as the product's **default price**. The site uses the Product IDs (`prod_…`) in `src/config/products.ts`. For a different catalog, override them with the `STRIPE_PRODUCT_*` bindings listed in `.dev.vars.example`. The previous `STRIPE_PRICE_*` bindings are no longer used.
+3. Set `STRIPE_SECRET_KEY` to the secret key for the same catalog and mode as those Product IDs. Use a test key for local and preview environments.
+4. To change a price, create a new one-time EUR price in Stripe and set it as the product's default. No site edit, webhook or redeploy is needed.
+
+The storefront starts with static fallback prices (€9 per standard belt, €11 for instructor black, €39 for the standard bundle, and €40 for the instructor bundle) and loads Stripe prices through `/api/prices`. A complete catalog is cached for five minutes. Each bundle shows the sum of its individual belt prices crossed out if that sum exceeds the bundle price. Checkout always checks the current Stripe defaults, and if a displayed price is stale, it updates the cart and asks the buyer to review it before starting payment.
 
 Checkout offers free hand delivery at the academy or €5 shipping to peninsular Spain. Stripe collects a phone number and a Spanish shipping address whichever option is picked. The country filter accepts all Spanish addresses; verify that the destination is in peninsular Spain before capturing an order with shipping.
 
@@ -37,4 +39,4 @@ An authorization may appear as a pending hold on the customer’s account. Strip
 
 Use the `keychain-gymclass` Pages project for the `horacioh/keychain.gymclass.cc` GitHub repository. Use the project root as the build root, `bun run build` as the build command, and `dist` as the output directory. Keep the root `functions/` directory beside that output so Pages includes the checkout function. For a manual deploy, build locally and run `npx wrangler pages deploy dist` from the project root.
 
-Add the seven Stripe bindings above in the Pages project’s **Settings → Variables and Secrets**. Set preview and production independently, using production-mode Stripe Prices and secret only in production. Attach `keychain.gymclass.cc` under **Custom domains** and verify a full Stripe test-mode checkout before switching production to live mode.
+Add `STRIPE_SECRET_KEY` and any product ID overrides in the Pages project’s **Settings → Variables and Secrets**. Set preview and production independently, using live-mode Stripe products and the live key only in production. Attach `keychain.gymclass.cc` under **Custom domains** and verify a full Stripe test-mode checkout before switching production to live mode.

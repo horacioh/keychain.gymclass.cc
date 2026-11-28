@@ -1,7 +1,10 @@
 ---
 import Site from '../layouts/Site.astro';
-import { copy } from '../config/copy';
-import { formatPrice, products, type Language } from '../config/products';
+import ProductControls from './ProductControls.astro';
+import ProductGallery from './ProductGallery.astro';
+import { copy, productDescriptions } from '../config/copy';
+import { productSlides } from '../config/gallery';
+import { formatPrice, isBundle, products, type Language } from '../config/products';
 
 interface Props { language: Language }
 const { language } = Astro.props;
@@ -28,27 +31,41 @@ const t = copy[language];
         data-pending={t.pending}
         data-checkout={t.checkout}
         data-error={t.checkoutError}
+        data-price-changed={t.priceChanged}
       >
         <div class="products">
-          {products.map((product) => (
-            <article class="product" data-product={product.id}>
-              <div class="product-image">
-                <img src={product.image} alt={product.id === 'bundle' ? t.photoAlt : product.name[language]} width={product.id === 'bundle' ? 1000 : 1600} height={product.id === 'bundle' ? 1000 : 1600} decoding="async" loading="lazy" />
-              </div>
-              <div class="product-body">
-                <h3>{product.name[language]}</h3>
-                {product.id === 'bundle' && <p class="bundle-detail">{t.bundleDetail}</p>}
-                <div class="product-actions flex flex-wrap items-center justify-between gap-2">
-                  <p class="product-price">{formatPrice(product.unitPrice, language)}</p>
-                  <div class="stepper inline-flex items-center" role="group" aria-label={product.name[language]}>
-                    <button type="button" data-step="-1" aria-label={`${t.decrement}: ${product.name[language]}`} disabled>−</button>
-                    <output data-quantity aria-live="polite">0</output>
-                    <button type="button" data-step="1" aria-label={`${t.increment}: ${product.name[language]}`}>+</button>
-                  </div>
+          {products.map((product) => {
+            const bundle = isBundle(product.id);
+            const alt = product.id === 'bundle' ? t.bundleAlt : product.id === 'bundle-teacher' ? t.teacherBundleAlt : product.name[language];
+            const size = bundle ? 1000 : 1600;
+            const slides = productSlides(product, language);
+            const dialogId = `details-${product.id}`;
+            return (
+              <article class="product" data-product={product.id}>
+                <button class="product-image product-trigger" type="button" data-open-details aria-haspopup="dialog" aria-controls={dialogId} aria-label={product.name[language]}>
+                  <img src={product.image} alt={alt} width={size} height={size} decoding="async" loading="lazy" />
+                </button>
+                <div class="product-body">
+                  <h3><button class="product-trigger" type="button" data-open-details aria-haspopup="dialog" aria-controls={dialogId}>{product.name[language]}</button></h3>
+                  {bundle && <p class="bundle-detail">{product.id === 'bundle' ? t.bundleDetail : t.teacherBundleDetail}</p>}
+                  <ProductControls product={product} language={language} />
                 </div>
-              </div>
-            </article>
-          ))}
+                <dialog class="product-dialog" id={dialogId} aria-labelledby={`${dialogId}-title`} aria-describedby={`${dialogId}-description`}>
+                  <div class="product-dialog-content">
+                    <button class="product-dialog-close" type="button" data-close-details autofocus aria-label={t.closeDetails}>×</button>
+                    {slides.length
+                      ? <ProductGallery slides={slides} language={language} />
+                      : <img class="product-dialog-image" src={product.image} alt={alt} width={size} height={size} decoding="async" loading="lazy" />}
+                    <div class="product-dialog-body">
+                      <h2 id={`${dialogId}-title`}>{product.name[language]}</h2>
+                      <p id={`${dialogId}-description`}>{productDescriptions[language][product.id]}</p>
+                      <ProductControls product={product} language={language} />
+                    </div>
+                  </div>
+                </dialog>
+              </article>
+            );
+          })}
         </div>
         <aside class="order" aria-labelledby="order-title">
           <div class="cart">
@@ -88,7 +105,7 @@ const t = copy[language];
 </Site>
 
 <script>
-  import { formatPrice, MAX_QUANTITY, products, type Language, type Product } from '../config/products';
+  import { formatPrice, getCompareAtPrice, getFallbackPrice, MAX_QUANTITY, products, type Language, type ProductId } from '../config/products';
 
   const store = document.querySelector<HTMLElement>('[data-store]')!;
   const language = store.dataset.language as Language;
@@ -99,8 +116,18 @@ const t = copy[language];
   const list = store.querySelector<HTMLUListElement>('[data-cart-items]')!;
   const total = store.querySelector<HTMLOutputElement>('[data-total]')!;
   const storageKey = 'bjj-keychain-cart';
-  type Id = Product['id'];
-  const cart = new Map<Id, number>();
+  const cart = new Map<ProductId, number>();
+  const prices = new Map<ProductId, number>();
+  const priceFor = (id: ProductId) => prices.get(id) ?? getFallbackPrice(id);
+
+  function updatePrices(values: unknown, preserveExisting = false) {
+    if (!values || typeof values !== 'object') return;
+    for (const { id } of products) {
+      if (preserveExisting && prices.has(id)) continue;
+      const amount = (values as Record<string, unknown>)[id];
+      if (typeof amount === 'number' && Number.isSafeInteger(amount) && amount >= 0) prices.set(id, amount);
+    }
+  }
 
   try {
     const saved: Record<string, unknown> | null = JSON.parse(sessionStorage.getItem(storageKey) ?? 'null');
@@ -114,11 +141,32 @@ const t = copy[language];
 
   const cards = products.map(product => {
     const card = store.querySelector<HTMLElement>(`[data-product="${product.id}"]`)!;
+    const dialog = card.querySelector('dialog')!;
+    let opener: HTMLButtonElement | undefined;
+    for (const trigger of card.querySelectorAll<HTMLButtonElement>('[data-open-details]')) {
+      trigger.addEventListener('click', () => {
+        opener = trigger;
+        dialog.showModal();
+      });
+    }
+    dialog.querySelector('[data-close-details]')!.addEventListener('click', () => dialog.close());
+    dialog.addEventListener('close', () => {
+      if (!dialog.open) opener?.focus({ preventScroll: true });
+    });
+    let backdropPressed = false;
+    dialog.addEventListener('pointerdown', event => { backdropPressed = event.target === dialog; });
+    dialog.addEventListener('click', event => {
+      if (backdropPressed && event.target === dialog) dialog.close();
+    });
     return {
       product,
-      decrement: card.querySelector<HTMLButtonElement>('[data-step="-1"]')!,
-      increment: card.querySelector<HTMLButtonElement>('[data-step="1"]')!,
-      quantity: card.querySelector<HTMLOutputElement>('[data-quantity]')!,
+      controls: Array.from(card.querySelectorAll('[data-product-controls]'), controls => ({
+        unitPrice: controls.querySelector<HTMLElement>('[data-unit-price]')!,
+        compareAt: controls.querySelector<HTMLElement>('[data-compare-at]'),
+        decrement: controls.querySelector<HTMLButtonElement>('[data-step="-1"]')!,
+        increment: controls.querySelector<HTMLButtonElement>('[data-step="1"]')!,
+        quantity: controls.querySelector<HTMLOutputElement>('[data-quantity]')!,
+      })),
     };
   });
 
@@ -126,20 +174,29 @@ const t = copy[language];
   function render() {
     let amount = 0;
     list.replaceChildren();
-    for (const { product, decrement, increment, quantity } of cards) {
+    for (const { product, controls } of cards) {
       const qty = cart.get(product.id) ?? 0;
-      quantity.value = String(qty);
-      decrement.disabled = pending || qty === 0;
-      increment.disabled = pending || qty === MAX_QUANTITY;
+      const cents = priceFor(product.id);
+      for (const { unitPrice, compareAt, decrement, increment, quantity } of controls) {
+        unitPrice.textContent = formatPrice(cents, language);
+        if (compareAt) {
+          const separate = getCompareAtPrice(product.id, priceFor);
+          compareAt.hidden = separate === null;
+          compareAt.querySelector('del')!.textContent = separate === null ? '' : formatPrice(separate, language);
+        }
+        quantity.value = String(qty);
+        decrement.disabled = pending || qty === 0;
+        increment.disabled = pending || qty === MAX_QUANTITY;
+      }
       if (!qty) continue;
       const line = document.createElement('li');
       const productLabel = document.createElement('span');
       productLabel.textContent = `${qty} × ${product.name[language]}`;
       const price = document.createElement('span');
-      price.textContent = formatPrice(qty * product.unitPrice, language);
+      price.textContent = formatPrice(qty * cents, language);
       line.append(productLabel, price);
       list.append(line);
-      amount += qty * product.unitPrice;
+      amount += qty * cents;
     }
     empty.hidden = cart.size > 0;
     list.hidden = cart.size === 0;
@@ -148,7 +205,7 @@ const t = copy[language];
     label.textContent = (pending ? store.dataset.pending : store.dataset.checkout) ?? '';
   }
 
-  function change(id: Id, delta: number) {
+  function change(id: ProductId, delta: number) {
     const qty = (cart.get(id) ?? 0) + delta;
     if (qty < 0 || qty > MAX_QUANTITY) return;
     if (qty) cart.set(id, qty);
@@ -162,9 +219,11 @@ const t = copy[language];
     render();
   }
 
-  for (const { product, decrement, increment } of cards) {
-    decrement.addEventListener('click', () => change(product.id, -1));
-    increment.addEventListener('click', () => change(product.id, 1));
+  for (const { product, controls } of cards) {
+    for (const { decrement, increment } of controls) {
+      decrement.addEventListener('click', () => change(product.id, -1));
+      increment.addEventListener('click', () => change(product.id, 1));
+    }
   }
 
   checkout.addEventListener('click', async () => {
@@ -176,8 +235,22 @@ const t = copy[language];
       const response = await fetch('/api/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ items: [...cart].map(([id, qty]) => ({ id, qty })) }),
+        body: JSON.stringify({
+          items: products.flatMap(({ id }) => {
+            const qty = cart.get(id);
+            return qty ? [{ id, qty, unitAmount: priceFor(id) }] : [];
+          }),
+        }),
       });
+      if (response.status === 409) {
+        const { prices: current } = await response.json();
+        updatePrices(current);
+        error.textContent = store.dataset.priceChanged ?? '';
+        error.hidden = false;
+        pending = false;
+        render();
+        return;
+      }
       if (!response.ok) throw new Error('Checkout request failed');
       const { url } = await response.json();
       if (typeof url !== 'string') throw new Error('Missing checkout URL');
@@ -194,4 +267,17 @@ const t = copy[language];
     if (event.persisted) { pending = false; render(); }
   });
   render();
+
+  async function loadPrices() {
+    try {
+      const response = await fetch('/api/prices');
+      if (!response.ok) return;
+      const values: unknown = await response.json();
+      updatePrices(values, true);
+      render();
+    } catch {
+      // Keep the static prices if the catalog is unavailable.
+    }
+  }
+  void loadPrices();
 </script>
