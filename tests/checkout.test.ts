@@ -70,8 +70,10 @@ test('sends Stripe Price IDs, manual capture, both shipping rates and the return
   expect(stripe.mock.calls.at(-1)?.[0]).toBe(sessions);
 });
 
-test('queues checkout analytics without waiting for OpenPanel or including customer and Stripe session data', async () => {
-  const analyticsUrl = 'https://api.openpanel.dev/track';
+test.each([
+  ['default API URL', undefined, 'https://openpanel.hhg.app/api/track'],
+  ['custom API URL', 'https://analytics.example.test/ingest/', 'https://analytics.example.test/ingest/track'],
+] as const)('queues checkout analytics with the %s without waiting for OpenPanel or including customer and Stripe session data', async (_, apiUrl, analyticsUrl) => {
   let rejectAnalytics!: (reason: Error) => void;
   const analyticsResponse = new Promise<Response>((_, reject) => { rejectAnalytics = reject; });
   const fetchMock = mock(async (url: string | URL, _init: RequestInit) => {
@@ -83,6 +85,7 @@ test('queues checkout analytics without waiting for OpenPanel or including custo
   const waitUntil = mock((_promise: Promise<unknown>) => {});
   const response = await order({ language: 'es', email: 'not-forwarded@example.test', items: [{ id: 'white', qty: 2, unitAmount: 900 }] }, {
     STRIPE_SECRET_KEY: 'not-a-real-key',
+    OPENPANEL_API_URL: apiUrl,
     OPENPANEL_CLIENT_ID: 'backend-client',
     OPENPANEL_CLIENT_SECRET: 'backend-secret',
   }, waitUntil);
@@ -92,6 +95,7 @@ test('queues checkout analytics without waiting for OpenPanel or including custo
   expect(fetchMock.mock.calls.map(([url]) => String(url)).slice(1)).toEqual([sessions, analyticsUrl]);
   expect(waitUntil).toHaveBeenCalledTimes(1);
   const [, init] = fetchMock.mock.calls[2]!;
+  expect(init.redirect).toBe('error');
   expect(init.headers).toEqual({
     'Content-Type': 'application/json',
     'openpanel-client-id': 'backend-client',

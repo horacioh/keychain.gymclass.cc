@@ -1,11 +1,17 @@
 import type { PagesFunction } from '@cloudflare/workers-types';
+import { openPanelApiUrl } from '../../src/config/openpanel';
 import { MAX_QUANTITY, products, type Language, type Product } from '../../src/config/products';
 import { getDefaultPrice, type StripeEnv } from '../../src/config/stripe';
 
 type WorkerContext = Parameters<PagesFunction<StripeEnv>>[0];
 type CheckoutContext = {
   request: Pick<WorkerContext['request'], 'url' | 'json'>;
-  env: StripeEnv & { STRIPE_REQUIRE_TERMS?: string; OPENPANEL_CLIENT_ID?: string; OPENPANEL_CLIENT_SECRET?: string };
+  env: StripeEnv & {
+    STRIPE_REQUIRE_TERMS?: string;
+    OPENPANEL_CLIENT_ID?: string;
+    OPENPANEL_CLIENT_SECRET?: string;
+    OPENPANEL_API_URL?: string;
+  };
   waitUntil?: WorkerContext['waitUntil'];
 };
 type Item = { product: Product; qty: number; unitAmount: number };
@@ -32,10 +38,11 @@ function parseOrder(body: unknown) {
 
 const stripeUnavailable = () => Response.json({ error: 'Checkout is temporarily unavailable. Please try again.' }, { status: 502 });
 
-async function trackCheckout(clientId: string, clientSecret: string, items: Item[], locale: Language) {
+async function trackCheckout(apiUrl: string, clientId: string, clientSecret: string, items: Item[], locale: Language) {
   try {
-    await fetch('https://api.openpanel.dev/track', {
+    await fetch(`${apiUrl}/track`, {
       method: 'POST',
+      redirect: 'error',
       headers: {
         'Content-Type': 'application/json',
         'openpanel-client-id': clientId,
@@ -142,7 +149,7 @@ export async function onRequestPost({ request, env, waitUntil }: CheckoutContext
     const result: unknown = await stripe.json();
     if (result && typeof result === 'object' && 'url' in result && typeof result.url === 'string' && result.url.startsWith('https://')) {
       if (waitUntil && env.OPENPANEL_CLIENT_ID && env.OPENPANEL_CLIENT_SECRET) {
-        waitUntil(trackCheckout(env.OPENPANEL_CLIENT_ID, env.OPENPANEL_CLIENT_SECRET, resolved, language));
+        waitUntil(trackCheckout(openPanelApiUrl(env.OPENPANEL_API_URL), env.OPENPANEL_CLIENT_ID, env.OPENPANEL_CLIENT_SECRET, resolved, language));
       }
       return Response.json({ url: result.url });
     }
