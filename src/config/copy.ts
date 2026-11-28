@@ -50,6 +50,7 @@ export const copy = {
     faq: [
       ['How do the stripes work?', 'The white, blue, purple, and brown belts have four white stripe rings. Both black belts have six, and the instructor belt adds two wide white bands. To show fewer stripes, unscrew the cap and group any unused stripe rings together.'],
       ['What is it made of?', 'The belt pieces are 3D-printed in PLA. Each keychain includes a steel split ring.'],
+      ['How many pieces come in each kit?', 'Each kit includes a threaded post, a threaded cap, and a steel split ring. White, blue, purple, and brown kits each have 12 black rings and 5 white rings. The standard black kit has 16 red rings and 8 white rings. The instructor black kit has 16 red rings, 8 regular white rings, and 3 double-height white rings. Use the extras to adjust your stripes or keep them as spares. Bundles include a complete kit for each belt in the set.'],
       ['How big is it?', 'Without the steel key ring, the printed body is about 58 mm long, or 68 mm for standard black and 78 mm for instructor black.'],
     ],
     footer: 'A little piece of life on the mats.',
@@ -83,6 +84,7 @@ export const copy = {
     faq: [
       ['¿Cómo funcionan las rayas?', 'Los cinturones blanco, azul, morado y marrón tienen cuatro aros blancos. Los dos cinturones negros tienen seis, y el de instructor lleva además dos franjas blancas anchas. Para mostrar menos rayas, desenrosca el tapón y agrupa los aros que no uses.'],
       ['¿De qué material es?', 'Las piezas del cinturón están impresas en 3D en PLA. Cada llavero incluye una anilla de acero.'],
+      ['¿Cuántas piezas incluye cada kit?', 'Cada kit incluye un poste roscado, un tapón roscado y una anilla de acero. Los kits blanco, azul, morado y marrón llevan 12 aros negros y 5 blancos cada uno. El kit negro estándar lleva 16 aros rojos y 8 blancos. El kit negro de instructor lleva 16 aros rojos, 8 blancos normales y 3 blancos de doble altura. Usa los aros adicionales para ajustar las rayas o guárdalos como repuesto. Las colecciones incluyen un kit completo por cada cinturón del conjunto.'],
       ['¿Cuánto mide?', 'Sin contar la anilla de acero, el cuerpo impreso mide unos 58 mm, o 68 mm para el negro estándar y 78 mm para el negro de instructor.'],
     ],
     footer: 'Un pedacito de tu vida en el tatami.',
