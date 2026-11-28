@@ -8,7 +8,7 @@ const { slides, language } = Astro.props;
 const t = copy[language].gallery;
 ---
 <div class="product-gallery" data-gallery role="group" aria-label={t.label}>
-  <div class="gallery-viewport" data-gallery-viewport data-vaul-no-drag tabindex="0" role="group" aria-label={t.label}>
+  <div class="gallery-viewport" data-gallery-viewport tabindex="0" role="group" aria-label={t.label}>
     {slides.map(({ src, alt, width, height }, index) => (
       <img src={src} alt={alt} width={width} height={height} decoding="async" loading={index ? 'lazy' : undefined}
         aria-hidden={index ? 'true' : undefined} data-gallery-slide />
@@ -89,7 +89,6 @@ const t = copy[language].gallery;
   @media (max-width: 639px) {
     .gallery-arrow { display: none; }
     .gallery-viewport { max-height: 43dvh; }
-    .gallery-viewport[data-vaul-no-drag] { touch-action: pan-x pan-y; }
     .gallery-dots button { width: 44px; height: 44px; }
   }
 </style>
