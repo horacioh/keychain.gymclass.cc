@@ -1,4 +1,3 @@
-// TODO: Confirm the €12 individual and €50 bundle prices before launch, and match them in Stripe.
 const SINGLE_PRICE = 1_200;
 const BUNDLE_PRICE = 5_000;
 export const MAX_QUANTITY = 20;
