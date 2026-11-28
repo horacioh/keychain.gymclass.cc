@@ -52,6 +52,7 @@ const t = copy[language];
                   <ProductControls product={product} language={language} />
                 </div>
                 <dialog class="product-dialog" id={dialogId} aria-labelledby={`${dialogId}-title`} aria-describedby={`${dialogId}-description`}>
+                  <div class="product-sheet-handle" aria-hidden="true"></div>
                   <div class="product-dialog-content">
                     <button class="product-dialog-close" type="button" data-close-details autofocus aria-label={t.closeDetails}>×</button>
                     {slides.length
@@ -107,6 +108,7 @@ const t = copy[language];
 </Site>
 
 <script>
+  import { setupProductDrawer } from './product-drawer';
   import { trackOpenPanel } from '../config/openpanel-web';
   import { formatPrice, getCompareAtPrice, getFallbackPrice, MAX_QUANTITY, products, type Language, type ProductId } from '../config/products';
 
@@ -144,25 +146,37 @@ const t = copy[language];
     // A blocked or stale session store must not prevent ordering.
   }
 
+  const mobileDrawer = window.matchMedia('(width < 640px)');
   const cards = products.map(product => {
     const card = store.querySelector<HTMLElement>(`[data-product="${product.id}"]`)!;
     const dialog = card.querySelector('dialog')!;
+    const drawer = setupProductDrawer(dialog, mobileDrawer);
     let opener: HTMLButtonElement | undefined;
     for (const trigger of card.querySelectorAll<HTMLButtonElement>('[data-open-details]')) {
       trigger.addEventListener('click', () => {
         opener = trigger;
-        dialog.showModal();
+        drawer.open();
         trackAnalytics?.('product_dialog_opened', { product_id: product.id, locale: language });
       });
     }
-    dialog.querySelector('[data-close-details]')!.addEventListener('click', () => dialog.close());
+    dialog.querySelector('[data-close-details]')!.addEventListener('click', drawer.close);
+    dialog.addEventListener('cancel', event => {
+      if (!mobileDrawer.matches) return;
+      event.preventDefault();
+      drawer.close();
+    });
     dialog.addEventListener('close', () => {
       if (!dialog.open) opener?.focus({ preventScroll: true });
     });
     let backdropPressed = false;
-    dialog.addEventListener('pointerdown', event => { backdropPressed = event.target === dialog; });
+    dialog.addEventListener('pointerdown', event => {
+      backdropPressed = event.target === dialog;
+      if (!backdropPressed || !mobileDrawer.matches) return;
+      const { left, right, top, bottom } = dialog.getBoundingClientRect();
+      backdropPressed = event.clientX < left || event.clientX > right || event.clientY < top || event.clientY > bottom;
+    });
     dialog.addEventListener('click', event => {
-      if (backdropPressed && event.target === dialog) dialog.close();
+      if (backdropPressed && event.target === dialog) drawer.close();
     });
     return {
       product,
