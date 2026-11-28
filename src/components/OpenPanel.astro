@@ -1,0 +1,9 @@
+<script>
+  import { trackOpenPanel } from '../config/openpanel-web';
+
+  trackOpenPanel('screen_view', {
+    __path: window.location.pathname,
+    __title: document.title,
+    locale: document.documentElement.lang,
+  });
+</script>

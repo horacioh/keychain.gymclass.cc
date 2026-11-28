@@ -42,3 +42,8 @@ Use the `keychain-gymclass` Pages project for the `horacioh/keychain.gymclass.cc
 Add `STRIPE_SECRET_KEY` and any product ID overrides in the Pages project’s **Settings → Variables and Secrets**. Set preview and production independently, using live-mode Stripe products and the live key only in production. Attach `keychain.gymclass.cc` under **Custom domains** and verify a full Stripe test-mode checkout before switching production to live mode.
 
 To require agreement to the terms at Stripe Checkout, set the terms of service URL in the Stripe Dashboard’s public details first, then set the Pages runtime variable `STRIPE_REQUIRE_TERMS=true`. Leave the variable unset until the URL is configured; Stripe rejects the Checkout Session otherwise.
+
+## OpenPanel analytics
+
+- Set `PUBLIC_OPENPANEL_CLIENT_ID` at **build time** to the OpenPanel web client ID. For a direct upload, provide it when running `bun run build`; Cloudflare Pages runtime bindings do not set it for an already-built site. Allow the storefront origin in the OpenPanel web client settings. Omit this variable to disable browser analytics. A web client secret is not needed and must not enter the browser build.
+- Set `OPENPANEL_CLIENT_ID` (backend client ID) and `OPENPANEL_CLIENT_SECRET` (backend client secret) as **Pages Functions runtime** bindings. Store the secret as encrypted. Both values are required for the background checkout event. Leave these bindings unset in environments that should not send checkout data.

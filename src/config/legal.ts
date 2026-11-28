@@ -95,6 +95,10 @@ Date:
           'Cloudflare hosts the site. Stripe processes payments and provides Checkout; Stripe may act as an independent controller for processing it carries out for its own legal and regulatory purposes. For shipped orders, we share the delivery details needed by the postal service.',
           'The seller is based in the United States. Where GDPR transfer rules apply to service providers, transfers are subject to applicable safeguards, such as the EU–US Data Privacy Framework where the recipient is certified, or the European Commission’s standard contractual clauses. You can contact us for information about applicable safeguards.',
         ] },
+        { heading: 'Storefront analytics', paragraphs: [
+          'When analytics is enabled, OpenPanel acts as our analytics processor. We use aggregate reports on page views, product details opened, cart additions and checkout activity to understand and improve the shop. Our legal basis is our legitimate interest in measuring and improving the storefront.',
+          'Events may include the page path without query parameters, site language, product selections, quantities and an order subtotal. OpenPanel may process technical request data, such as IP address and browser information, to provide the analytics. We do not send your contact details, delivery address, card data or Stripe session ID to OpenPanel. Analytics does not set cookies or use browser storage.',
+        ] },
         { heading: 'Retention', paragraphs: [
           'We keep order data for as long as needed to handle the order and for the periods required by applicable commercial and recordkeeping law.',
         ] },
@@ -173,6 +177,10 @@ Fecha:
         { heading: 'Proveedores y transferencias internacionales', paragraphs: [
           'Cloudflare aloja el sitio web. Stripe procesa los pagos y presta el servicio de Checkout; Stripe puede actuar como responsable independiente respecto al tratamiento que realice para cumplir sus propias obligaciones legales y regulatorias. Para los pedidos con envío, compartimos con el servicio postal los datos necesarios para la entrega.',
           'El vendedor está establecido en Estados Unidos. Cuando sean aplicables las reglas del RGPD sobre transferencias a proveedores, se aplicarán las garantías correspondientes, como el Marco de Privacidad de Datos UE–EE. UU. si el destinatario está certificado o las cláusulas contractuales tipo de la Comisión Europea. Puedes escribirnos para consultar las garantías aplicables.',
+        ] },
+        { heading: 'Analítica de la tienda', paragraphs: [
+          'Cuando la analítica está habilitada, OpenPanel actúa como nuestro encargado del tratamiento para este servicio. Utilizamos informes agregados sobre las páginas vistas, las fichas de producto consultadas, las adiciones al carrito y la actividad de pago para entender y mejorar la tienda. La base jurídica es nuestro interés legítimo en medir y mejorar el funcionamiento de la tienda.',
+          'Los eventos pueden incluir la ruta de la página sin parámetros de consulta, el idioma de la tienda, los productos seleccionados, las cantidades y el subtotal del pedido. OpenPanel puede tratar datos técnicos de la solicitud, como la dirección IP e información del navegador, para prestar el servicio. No enviamos a OpenPanel tus datos de contacto, tu dirección de entrega, los datos de la tarjeta ni el identificador de la sesión de Stripe. La analítica no instala cookies ni utiliza el almacenamiento del navegador.',
         ] },
         { heading: 'Conservación', paragraphs: [
           'Conservamos los datos del pedido durante el tiempo necesario para gestionarlo y durante los plazos exigidos por la normativa mercantil y de conservación de registros aplicable.',
