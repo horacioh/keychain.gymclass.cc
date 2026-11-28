@@ -1,3 +1,3 @@
 export function openPanelApiUrl(override?: string) {
-  return override?.trim().replace(/\/+$/, '') || 'https://openpanel.hhg.app/api';
+  return override?.trim().replace(/\/+$/, '') || 'https://openpanelapi.hhg.app';
 }

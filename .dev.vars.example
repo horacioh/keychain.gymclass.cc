@@ -10,4 +10,4 @@ STRIPE_SECRET_KEY=sk_test_replace_me
 # STRIPE_PRODUCT_BUNDLE_TEACHER=prod_replace_me
 # OPENPANEL_CLIENT_ID=backend_client_id
 # OPENPANEL_CLIENT_SECRET=backend_client_secret
-# OPENPANEL_API_URL=https://openpanel.hhg.app/api
+# OPENPANEL_API_URL=https://openpanelapi.hhg.app

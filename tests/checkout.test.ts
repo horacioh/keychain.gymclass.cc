@@ -71,7 +71,7 @@ test('sends Stripe Price IDs, manual capture, both shipping rates and the return
 });
 
 test.each([
-  ['default API URL', undefined, 'https://openpanel.hhg.app/api/track'],
+  ['default API URL', undefined, 'https://openpanelapi.hhg.app/track'],
   ['custom API URL', 'https://analytics.example.test/ingest/', 'https://analytics.example.test/ingest/track'],
 ] as const)('queues checkout analytics with the %s without waiting for OpenPanel or including customer and Stripe session data', async (_, apiUrl, analyticsUrl) => {
   let rejectAnalytics!: (reason: Error) => void;
