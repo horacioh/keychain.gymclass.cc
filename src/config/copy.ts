@@ -37,6 +37,10 @@ export const copy = {
     teacherBundleAlt: 'Five BJJ belt keychains in white, blue, purple, brown, and instructor black',
     separatePrice: 'Bought separately:',
     closeDetails: 'Close product details',
+    gallery: {
+      label: 'Product photos', previous: 'Previous photo', next: 'Next photo',
+      angle: 'close-up of the assembled keychain', stripes: 'stripe configurations from', parts: 'all kit parts laid out separately',
+    },
     cartTitle: 'Your order', empty: 'Choose a belt to start your order.', total: 'Total before shipping',
     checkout: 'Checkout', pending: 'Opening checkout…', checkoutError: 'We couldn’t open checkout. Please try again.',
     priceChanged: 'Prices have changed. Please review your updated order before checking out.',
@@ -66,6 +70,10 @@ export const copy = {
     teacherBundleAlt: 'Cinco llaveros de cinturón de BJJ: blanco, azul, morado, marrón y negro de instructor',
     separatePrice: 'Por separado:',
     closeDetails: 'Cerrar detalles del producto',
+    gallery: {
+      label: 'Fotos del producto', previous: 'Foto anterior', next: 'Foto siguiente',
+      angle: 'primer plano del llavero montado', stripes: 'configuraciones de rayas de', parts: 'todas las piezas del kit por separado',
+    },
     cartTitle: 'Tu pedido', empty: 'Elige un cinturón para empezar tu pedido.', total: 'Total sin envío',
     checkout: 'Ir al pago', pending: 'Abriendo el pago…', checkoutError: 'No pudimos abrir el pago. Inténtalo de nuevo.',
     priceChanged: 'Los precios han cambiado. Revisa tu pedido actualizado antes de ir al pago.',

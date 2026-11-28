@@ -1,7 +1,9 @@
 ---
 import Site from '../layouts/Site.astro';
 import ProductControls from './ProductControls.astro';
+import ProductGallery from './ProductGallery.astro';
 import { copy, productDescriptions } from '../config/copy';
+import { productSlides } from '../config/gallery';
 import { formatPrice, isBundle, products, type Language } from '../config/products';
 
 interface Props { language: Language }
@@ -36,6 +38,7 @@ const t = copy[language];
             const bundle = isBundle(product.id);
             const alt = product.id === 'bundle' ? t.bundleAlt : product.id === 'bundle-teacher' ? t.teacherBundleAlt : product.name[language];
             const size = bundle ? 1000 : 1600;
+            const slides = productSlides(product, language);
             const dialogId = `details-${product.id}`;
             return (
               <article class="product" data-product={product.id}>
@@ -50,7 +53,9 @@ const t = copy[language];
                 <dialog class="product-dialog" id={dialogId} aria-labelledby={`${dialogId}-title`} aria-describedby={`${dialogId}-description`}>
                   <div class="product-dialog-content">
                     <button class="product-dialog-close" type="button" data-close-details autofocus aria-label={t.closeDetails}>×</button>
-                    <img class="product-dialog-image" src={product.image} alt={alt} width={size} height={size} decoding="async" loading="lazy" />
+                    {slides.length
+                      ? <ProductGallery slides={slides} language={language} />
+                      : <img class="product-dialog-image" src={product.image} alt={alt} width={size} height={size} decoding="async" loading="lazy" />}
                     <div class="product-dialog-body">
                       <h2 id={`${dialogId}-title`}>{product.name[language]}</h2>
                       <p id={`${dialogId}-description`}>{productDescriptions[language][product.id]}</p>

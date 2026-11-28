@@ -1,0 +1,94 @@
+---
+import { copy } from '../config/copy';
+import type { productSlides } from '../config/gallery';
+import type { Language } from '../config/products';
+
+interface Props { slides: ReturnType<typeof productSlides>; language: Language }
+const { slides, language } = Astro.props;
+const t = copy[language].gallery;
+---
+<div class="product-gallery" data-gallery role="group" aria-label={t.label}>
+  <div class="gallery-viewport" data-gallery-viewport tabindex="0" role="group" aria-label={t.label}>
+    {slides.map(({ src, alt, width, height }, index) => (
+      <img src={src} alt={alt} width={width} height={height} decoding="async" loading={index ? 'lazy' : undefined}
+        aria-hidden={index ? 'true' : undefined} data-gallery-slide />
+    ))}
+  </div>
+  <div class="gallery-controls">
+    <button type="button" class="gallery-arrow" data-gallery-step="-1" aria-label={t.previous} aria-disabled="true">‹</button>
+    <div class="gallery-dots">
+      {slides.map(({ alt }, index) => (
+        <button type="button" data-gallery-go={index} aria-label={`${index + 1}/${slides.length}: ${alt}`}
+          aria-current={index === 0 ? 'true' : undefined}></button>
+      ))}
+    </div>
+    <button type="button" class="gallery-arrow" data-gallery-step="1" aria-label={t.next} aria-disabled="false">›</button>
+  </div>
+</div>
+
+<script>
+  for (const gallery of document.querySelectorAll<HTMLElement>('[data-gallery]')) {
+    const viewport = gallery.querySelector<HTMLElement>('[data-gallery-viewport]')!;
+    const slides = Array.from(gallery.querySelectorAll<HTMLImageElement>('[data-gallery-slide]'));
+    const dots = gallery.querySelectorAll<HTMLButtonElement>('[data-gallery-go]');
+    const previous = gallery.querySelector<HTMLButtonElement>('[data-gallery-step="-1"]')!;
+    const next = gallery.querySelector<HTMLButtonElement>('[data-gallery-step="1"]')!;
+    let current = 0;
+    function go(index: number) {
+      if (index < 0 || index >= slides.length) return;
+      const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      viewport.scrollTo({ left: index * viewport.clientWidth, behavior: reducedMotion ? 'instant' : 'smooth' });
+    }
+    viewport.addEventListener('scroll', () => {
+      if (!viewport.clientWidth) return;
+      current = Math.max(0, Math.min(slides.length - 1, Math.round(viewport.scrollLeft / viewport.clientWidth)));
+      dots.forEach((dot, index) => {
+        if (index === current) dot.setAttribute('aria-current', 'true');
+        else dot.removeAttribute('aria-current');
+      });
+      slides.forEach((slide, index) => {
+        if (index === current) slide.removeAttribute('aria-hidden');
+        else slide.setAttribute('aria-hidden', 'true');
+      });
+      previous.setAttribute('aria-disabled', String(current === 0));
+      next.setAttribute('aria-disabled', String(current === slides.length - 1));
+    }, { passive: true });
+    previous.addEventListener('click', () => go(current - 1));
+    next.addEventListener('click', () => go(current + 1));
+    dots.forEach((dot, index) => dot.addEventListener('click', () => go(index)));
+    gallery.addEventListener('keydown', event => {
+      if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+      event.preventDefault();
+      go(current + (event.key === 'ArrowLeft' ? -1 : 1));
+    });
+  }
+</script>
+
+<style>
+  .product-gallery { min-width: 0; background: #d2cfc8; }
+  .gallery-viewport {
+    display: flex; width: 100%; aspect-ratio: 1; overflow-x: auto; overscroll-behavior-x: contain;
+    scroll-snap-type: x mandatory; scrollbar-width: none;
+  }
+  .gallery-viewport:focus-visible { outline: 2px solid currentColor; outline-offset: -3px; }
+  .gallery-viewport img {
+    flex: 0 0 100%; min-width: 0; width: 100%; height: 100%; object-fit: contain;
+    scroll-snap-align: start; scroll-snap-stop: always;
+  }
+  .gallery-controls, .gallery-dots { display: flex; align-items: center; justify-content: center; }
+  .gallery-controls { gap: 8px; background: var(--paper); }
+  .gallery-controls button { cursor: pointer; }
+  .gallery-arrow, .gallery-dots button { width: 36px; height: 36px; }
+  .gallery-arrow { font-size: 1.4rem; }
+  .gallery-arrow[aria-disabled="true"] { opacity: .35; cursor: default; }
+  .gallery-dots button::before {
+    content: ''; display: block; width: 8px; height: 8px; margin: auto; border-radius: 50%;
+    border: 1px solid currentColor;
+  }
+  .gallery-dots button[aria-current="true"]::before { background: currentColor; }
+  @media (max-width: 639px) {
+    .gallery-arrow { display: none; }
+    .gallery-viewport { max-height: 43dvh; }
+    .gallery-dots button { width: 44px; height: 44px; }
+  }
+</style>
