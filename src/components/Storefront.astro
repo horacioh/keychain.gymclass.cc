@@ -144,15 +144,32 @@ const t = copy[language];
     // A blocked or stale session store must not prevent ordering.
   }
 
+  const mobileDrawer = window.matchMedia('(width < 640px)');
+  let loadingDrawer = false;
   const cards = products.map(product => {
     const card = store.querySelector<HTMLElement>(`[data-product="${product.id}"]`)!;
     const dialog = card.querySelector('dialog')!;
     let opener: HTMLButtonElement | undefined;
     for (const trigger of card.querySelectorAll<HTMLButtonElement>('[data-open-details]')) {
-      trigger.addEventListener('click', () => {
+      trigger.addEventListener('click', async () => {
+        if (loadingDrawer) return;
+        trackAnalytics?.('product_dialog_opened', { product_id: product.id, locale: language });
+        if (mobileDrawer.matches) {
+          loadingDrawer = true;
+          try {
+            const { openProductDrawer } = await import('./product-drawer');
+            if (mobileDrawer.matches) {
+              openProductDrawer(dialog, trigger, mobileDrawer);
+              return;
+            }
+          } catch {
+            // Keep product details usable if the optional drawer chunk fails to load.
+          } finally {
+            loadingDrawer = false;
+          }
+        }
         opener = trigger;
         dialog.showModal();
-        trackAnalytics?.('product_dialog_opened', { product_id: product.id, locale: language });
       });
     }
     dialog.querySelector('[data-close-details]')!.addEventListener('click', () => dialog.close());
