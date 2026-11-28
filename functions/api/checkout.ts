@@ -3,10 +3,10 @@ import { MAX_QUANTITY, products, type Product } from '../../src/config/products'
 import { getDefaultPrice, type StripeEnv } from '../../src/config/stripe';
 
 type WorkerContext = Parameters<PagesFunction<StripeEnv>>[0];
-type CheckoutContext = { request: Pick<WorkerContext['request'], 'url' | 'json'>; env: StripeEnv };
+type CheckoutContext = { request: Pick<WorkerContext['request'], 'url' | 'json'>; env: StripeEnv & { STRIPE_REQUIRE_TERMS?: string } };
 type Item = { product: Product; qty: number; unitAmount: number };
 
-function parseItems(body: unknown): Item[] | null {
+function parseOrder(body: unknown) {
   if (!body || typeof body !== 'object' || !('items' in body)) return null;
   const { items } = body;
   if (!Array.isArray(items) || items.length === 0 || items.length > products.length) return null;
@@ -22,19 +22,21 @@ function parseItems(body: unknown): Item[] | null {
     seen.add(product.id);
     selection.push({ product, qty, unitAmount });
   }
-  return selection;
+  const spanish = 'language' in body && body.language === 'es';
+  return { selection, home: spanish ? '/es/' : '/' };
 }
 
 const stripeUnavailable = () => Response.json({ error: 'Checkout is temporarily unavailable. Please try again.' }, { status: 502 });
 
 export async function onRequestPost({ request, env }: CheckoutContext) {
-  let selection: Item[] | null;
+  let order: ReturnType<typeof parseOrder>;
   try {
-    selection = parseItems(await request.json());
+    order = parseOrder(await request.json());
   } catch {
-    selection = null;
+    order = null;
   }
-  if (!selection) return Response.json({ error: 'Select at least one valid product with a quantity from 1 to 20.' }, { status: 400 });
+  if (!order) return Response.json({ error: 'Select at least one valid product with a quantity from 1 to 20.' }, { status: 400 });
+  const { selection, home } = order;
 
   const secret = env.STRIPE_SECRET_KEY;
   if (!secret) {
@@ -64,9 +66,10 @@ export async function onRequestPost({ request, env }: CheckoutContext) {
     'shipping_address_collection[allowed_countries][0]': 'ES',
     'phone_number_collection[enabled]': 'true',
     locale: 'auto',
-    success_url: `${origin}/thanks?session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${origin}/#shop`,
+    success_url: `${origin}${home}thanks?session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${origin}${home}#shop`,
   });
+  if (env.STRIPE_REQUIRE_TERMS === 'true') params.set('consent_collection[terms_of_service]', 'required');
   resolved.forEach(({ price, qty }, index) => {
     params.set(`line_items[${index}][price]`, price.id);
     params.set(`line_items[${index}][quantity]`, String(qty));

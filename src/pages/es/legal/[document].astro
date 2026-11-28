@@ -1,0 +1,13 @@
+---
+import LegalPage from '../../../components/LegalPage.astro';
+import { legalDocuments, legalSlug, type LegalDocument } from '../../../config/legal';
+
+export function getStaticPaths() {
+  return legalDocuments.map(document => ({ params: { document: legalSlug('es', document) }, props: { document } }));
+}
+
+interface Props { document: LegalDocument }
+const { document } = Astro.props;
+---
+
+<LegalPage language="es" document={document} />

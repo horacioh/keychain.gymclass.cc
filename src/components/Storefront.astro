@@ -4,6 +4,7 @@ import ProductControls from './ProductControls.astro';
 import ProductGallery from './ProductGallery.astro';
 import { copy, productDescriptions } from '../config/copy';
 import { productSlides } from '../config/gallery';
+import { legalPath } from '../config/legal';
 import { formatPrice, isBundle, products, type Language } from '../config/products';
 
 interface Props { language: Language }
@@ -81,6 +82,7 @@ const t = copy[language];
             </button>
             <p class="checkout-error" data-checkout-error role="alert" hidden></p>
             <p class="cart-charge">{t.charge}</p>
+            <p class="cart-charge"><a class="underline underline-offset-2" href={legalPath(language, 'terms')}>{t.reviewTerms}</a></p>
           </div>
           <div class="delivery">
             <h3>{t.deliveryTitle}</h3>
@@ -236,6 +238,7 @@ const t = copy[language];
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          language,
           items: products.flatMap(({ id }) => {
             const qty = cart.get(id);
             return qty ? [{ id, qty, unitAmount: priceFor(id) }] : [];
